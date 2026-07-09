@@ -40,6 +40,13 @@ import { clearSession, getSessionUser, requiresRole, setSession } from './lib/se
 const APP_NAME = 'IRMS';
 const BRAND_ICON = `${import.meta.env.BASE_URL}brand/irms-sidebar-icon.png`;
 const BRAND_LOGO = `${import.meta.env.BASE_URL}brand/irms-selected-logo-source.png`;
+const APP_BASE_PATH = (import.meta.env.VITE_APP_BASE_PATH || '/frontend').replace(/\/+$/, '') || '/';
+
+function appPath(path) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return APP_BASE_PATH === '/' ? normalizedPath : `${APP_BASE_PATH}${normalizedPath}`;
+}
+
 const ToastContext = createContext(null);
 
 function ToastProvider({ children }) {
@@ -72,7 +79,7 @@ function useToast() {
 
 function App() {
   return (
-    <BrowserRouter basename="/frontend">
+    <BrowserRouter basename={APP_BASE_PATH === '/' ? '/' : APP_BASE_PATH}>
       <ToastProvider>
         <Routes>
           <Route path="/" element={<Navigate to="/customer" replace />} />
@@ -701,7 +708,7 @@ function PaymentSuccessPage() {
           <div className="summary-row"><span>Table</span><strong>{table || '-'}</strong></div>
         </div>
         <div className="page-actions">
-          <a className="btn btn-primary" href={`/frontend/customer?table=${encodeURIComponent(table || 'T1')}&token=${encodeURIComponent(token || '')}`}>
+          <a className="btn btn-primary" href={appPath(`/customer?table=${encodeURIComponent(table || 'T1')}&token=${encodeURIComponent(token || '')}`)}>
             <ArrowLeft size={16} />
             <span>Back to menu</span>
           </a>
@@ -719,7 +726,7 @@ function PaymentFailedPage() {
         <h1>Payment not completed</h1>
         <p>The payment could not be verified. You can return to the menu and try again.</p>
         <div className="page-actions">
-          <a className="btn btn-primary" href="/frontend/customer">
+          <a className="btn btn-primary" href={appPath('/customer')}>
             <ArrowLeft size={16} />
             <span>Back to menu</span>
           </a>

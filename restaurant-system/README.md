@@ -35,9 +35,10 @@ restaurant-system/
 1. `cd restaurant-system/backend`
 2. Run `npm install`
 3. Copy `.env.example` to `.env` and set your MySQL, JWT, Paystack, and base URL values.
-4. `cd ../frontend`
-5. Run `npm install`
-6. Import `database/schema.sql` into MySQL.
+4. For a Vercel frontend build, set `VITE_API_BASE_URL` to your Railway backend URL and `VITE_APP_BASE_PATH` to `/`.
+5. `cd ../frontend`
+6. Run `npm install`
+7. Import `database/schema.sql` into MySQL.
 
 ## Run the App
 
@@ -118,13 +119,13 @@ These are React routes served under `/frontend`:
 ## Deployment Notes
 
 - `BASE_URL` or `PUBLIC_BASE_URL` should be set to the public host used by the QR links.
-- If you deploy to Vercel, make sure the project points at the frontend app folder and that your backend is hosted separately or adapted for serverless functions.
+- If you deploy the frontend to Vercel, set the project root to `restaurant-system/frontend`, then add `VITE_API_BASE_URL` and `VITE_APP_BASE_PATH` in Vercel environment variables. Keep the backend on Railway or another Node host.
 - Pushing to GitHub only triggers Vercel if the Vercel project is actually linked to this repo and auto-deploys are enabled.
 
 ## QR Links
 
 Customers must open a valid link that contains both the table number and token. The manager QR generator now creates links like:
 
-`/frontend/scan/T1/<token>`
+`/scan/T1/<token>` when the frontend is deployed at the site root, or `/frontend/scan/T1/<token>` when it is served by the Express backend.
 
 That route redirects into the customer ordering page with the correct table context.

@@ -1,4 +1,9 @@
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+
+function joinApiPath(path) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE}${normalizedPath}`;
+}
 
 function authHeaders(extra = {}) {
   const headers = { 'Content-Type': 'application/json', ...extra };
@@ -8,7 +13,7 @@ function authHeaders(extra = {}) {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(joinApiPath(path), {
     ...options,
     headers: authHeaders(options.headers || {})
   });
