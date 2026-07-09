@@ -1,0 +1,25 @@
+# Dependencies
+restaurant-system/backend/node_modules/
+restaurant-system/frontend/node_modules/
+
+# Frontend build output
+restaurant-system/frontend/dist/
+
+# Environment files
+restaurant-system/backend/.env
+restaurant-system/frontend/.env
+restaurant-system/**/.env.*
+!restaurant-system/backend/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/*
+!.vscode/launch.json
