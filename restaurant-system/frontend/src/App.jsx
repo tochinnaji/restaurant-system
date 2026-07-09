@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, NavLink, Route, BrowserRouter, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+﻿import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, NavLink, Route, BrowserRouter, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Bell,
@@ -29,12 +29,17 @@ import {
   Plus,
   Search,
   Save,
-  Eye
+  Eye,
+  MoonStar,
+  SunMedium
 } from 'lucide-react';
 import { api } from './lib/api';
 import { badgeClass, classNames, formatDate, formatNaira } from './lib/format';
 import { clearSession, getSessionUser, requiresRole, setSession } from './lib/session';
 
+const APP_NAME = 'IRMS';
+const BRAND_ICON = `${import.meta.env.BASE_URL}brand/irms-sidebar-icon.png`;
+const BRAND_LOGO = `${import.meta.env.BASE_URL}brand/irms-selected-logo-source.png`;
 const ToastContext = createContext(null);
 
 function ToastProvider({ children }) {
@@ -72,6 +77,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/customer" replace />} />
           <Route path="/shared/login" element={<LoginPage />} />
+          <Route path="/scan/:tableNumber/:token" element={<ScanRedirectPage />} />
           <Route path="/customer" element={<CustomerPage />} />
           <Route path="/customer/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/customer/payment-failed" element={<PaymentFailedPage />} />
@@ -94,6 +100,14 @@ function App() {
       </ToastProvider>
     </BrowserRouter>
   );
+}
+
+function ScanRedirectPage() {
+  const { tableNumber, token } = useParams();
+  const table = tableNumber ? decodeURIComponent(tableNumber) : 'T1';
+  const qrToken = token ? decodeURIComponent(token) : '';
+
+  return <Navigate to={`/customer?table=${encodeURIComponent(table)}&token=${encodeURIComponent(qrToken)}`} replace />;
 }
 
 function ProtectedShell({ allowedRoles, shell }) {
@@ -128,8 +142,13 @@ function Shell({ user, navItems, children, eyebrow, title, subtitle, footerExtra
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand-block">
-          <div className="brand-mark">RestaurantOS</div>
-          <div className="brand-copy">{eyebrow}</div>
+          <div className="brand-mark" aria-label={APP_NAME}>
+            <img src={BRAND_ICON} alt="" aria-hidden="true" />
+          </div>
+          <div className="brand-copy">
+            <strong>{APP_NAME}</strong>
+            <span>{eyebrow}</span>
+          </div>
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
@@ -331,7 +350,9 @@ function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-brand">RestaurantOS</div>
+        <div className="auth-brand">
+          <img src={BRAND_LOGO} alt={APP_NAME} />
+        </div>
         <h1>Sign in</h1>
         <p>Access the customer, staff, manager, or CEO workspace.</p>
         <form className="grid-form" onSubmit={onSubmit}>
@@ -496,13 +517,17 @@ function CustomerPage() {
       <header className="customer-topbar">
         <div>
           <div className="eyebrow">Customer ordering</div>
-          <h1>RestaurantOS</h1>
+          <h1>{APP_NAME}</h1>
           <p>{tableHint}</p>
         </div>
         <div className="customer-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setShowMessage(true)} disabled={!activeOrderId}>
             <MessageSquareText size={16} />
             <span>Message kitchen</span>
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>
+            <RefreshCw size={16} />
+            <span>Refresh</span>
           </button>
           <button type="button" className="btn btn-primary" onClick={() => setShowCart(true)}>
             <ShoppingCart size={16} />
@@ -554,7 +579,7 @@ function CustomerPage() {
                 <ChefHat size={18} />
               </div>
               <span className={badgeClass(item.availability_status)}>
-                {item.availability_status.replace('_', ' ')}
+                {item.availability_status === 'out_of_stock' ? 'out of stock' : item.availability_status}
               </span>
             </div>
             <h3>{item.item_name}</h3>
@@ -1495,7 +1520,7 @@ function Modal({ open, title, onClose, children }) {
       <div className="modal-card">
         <div className="modal-head">
           <strong>{title}</strong>
-          <button type="button" className="icon-btn" onClick={onClose}>×</button>
+          <button type="button" className="icon-btn" onClick={onClose}>Ã—</button>
         </div>
         {children}
       </div>

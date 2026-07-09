@@ -1,5 +1,6 @@
-const db = require('../config/db');
+﻿const db = require('../config/db');
 const https = require('https');
+const { getPublicBaseUrl } = require('../utils/publicUrl');
 
 const safeJsonParse = (data) => {
   try {
@@ -39,7 +40,7 @@ const initializePayment = async (req, res) => {
       email,
       amount: amountInKobo,
       metadata: { order_id, table_number: order.table_number, table_token: tableToken },
-      callback_url: `${process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`}/api/payment/verify`
+      callback_url: `${getPublicBaseUrl(req)}/api/payment/verify`
     });
 
     const options = {

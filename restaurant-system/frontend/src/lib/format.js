@@ -1,4 +1,4 @@
-export function formatNaira(amount) {
+﻿export function formatNaira(amount) {
   const value = Number(amount || 0);
   return `NGN ${value.toLocaleString('en-NG', {
     minimumFractionDigits: 2,
@@ -25,9 +25,10 @@ export function badgeClass(status) {
   const map = {
     pending: 'badge badge-warning',
     preparing: 'badge badge-info',
+    available: 'badge badge-success',
     ready: 'badge badge-success',
     delivered: 'badge badge-muted',
-    cancelled: 'badge badge-muted',
+    cancelled: 'badge badge-danger',
     paid: 'badge badge-success',
     unpaid: 'badge badge-warning',
     failed: 'badge badge-danger',
