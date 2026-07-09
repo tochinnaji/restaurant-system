@@ -1,53 +1,78 @@
-# Intelligent Restaurant Management System
+﻿# IRMS
 
-An Express and MySQL restaurant management app with QR-based ordering, menu management, stock tracking, kitchen messaging, dashboards, and Paystack payment support.
+IRMS is a QR-based restaurant management system built with an Express/MySQL backend and a React/Vite frontend. It supports customer ordering, kitchen/staff operations, manager and CEO dashboards, stock tracking, QR table links, preparation-time records, and Paystack payments.
 
-## Project Structure
+## Stack
+
+- Backend: Node.js, Express, MySQL
+- Frontend: React, Vite, React Router
+- Payments: Paystack
+- UI: Vanilla CSS with Lucide icons
+
+## Project Layout
 
 ```text
 restaurant-system/
   backend/
-    config/db.js
+    config/
     controllers/
-    middleware/auth.js
-    routes/index.js
-    utils/waitTime.js
+    middleware/
+    routes/
+    utils/
     server.js
-    package.json
     .env.example
   frontend/
-    customer/
-    staff/
-    manager/
-    shared/
+    public/brand/
+    src/
+    index.html
+    vite.config.js
   database/
     schema.sql
 ```
 
-## Setup
+## Local Setup
 
-1. `cd restaurant-system`
-2. Import `database/schema.sql` into MySQL.
-3. `cd backend && npm install`
-4. Copy `backend/.env.example` to `.env` and set your database, JWT, Paystack, and base URL values.
-5. Start the server with `npm run dev` for development or `npm start` for production.
+1. `cd restaurant-system/backend`
+2. Run `npm install`
+3. Copy `.env.example` to `.env` and set your MySQL, JWT, Paystack, and base URL values.
+4. `cd ../frontend`
+5. Run `npm install`
+6. Import `database/schema.sql` into MySQL.
 
-## Pages
+## Run the App
 
-- Customer ordering: `/frontend/customer/index.html?table=T1&token=...`
-- Staff login: `/frontend/shared/login.html`
-- Kitchen dashboard: `/frontend/staff/index.html`
-- Manager dashboard: `/frontend/manager/index.html`
-- Menu management: `/frontend/manager/menu.html`
-- Order list: `/frontend/manager/orders.html`
-- Stock management: `/frontend/manager/stock.html`
-- QR code generator: `/frontend/manager/qr.html`
+### Development
+
+- Backend: `cd restaurant-system/backend && npm run dev`
+- Frontend: `cd restaurant-system/frontend && npm run dev`
+
+### Production
+
+- Build frontend: `cd restaurant-system/frontend && npm run build`
+- Start backend: `cd restaurant-system/backend && npm start`
+- In production, Express serves the built frontend from `frontend/dist`.
+
+## Main Routes
+
+These are React routes served under `/frontend`:
+
+- Customer ordering: `/frontend/customer`
+- QR scan redirect: `/frontend/scan/:tableNumber/:token`
+- Login: `/frontend/shared/login`
+- Staff console: `/frontend/staff`
+- Manager dashboard: `/frontend/manager`
+- Menu management: `/frontend/manager/menu`
+- Order management: `/frontend/manager/orders`
+- Stock management: `/frontend/manager/stock`
+- QR generator: `/frontend/manager/qr`
+- Users: `/frontend/manager/users`
 
 ## API
 
 ### Auth
 - `POST /api/auth/login`
 - `POST /api/auth/register`
+- `GET /api/users`
 
 ### Menu
 - `GET /api/menu`
@@ -62,6 +87,7 @@ restaurant-system/
 - `GET /api/orders`
 - `PUT /api/orders/:id/status`
 - `GET /api/dashboard`
+- `GET /api/prep-times`
 
 ### Payments
 - `POST /api/payment/initialize`
@@ -78,16 +104,27 @@ restaurant-system/
 - `POST /api/stock`
 - `PUT /api/stock/:id`
 
-### QR Codes
+### QR
 - `POST /api/qr/generate`
 - `GET /api/qr/tables`
 
-## Default Login
+## Default Logins
 
 - Admin: `admin@restaurant.com` / `Admin@123`
 - Manager: `manager@restaurant.com` / `Admin@123`
+- CEO: `ceo@restaurant.com` / `Admin@123`
+- Staff: `staff@restaurant.com` / `Admin@123`
 
-## Notes
+## Deployment Notes
 
-- Customers must use a valid QR link that includes both `table` and `token`.
-- The project keeps the current stack: Express, MySQL, vanilla HTML/CSS/JS, and Paystack.
+- `BASE_URL` or `PUBLIC_BASE_URL` should be set to the public host used by the QR links.
+- If you deploy to Vercel, make sure the project points at the frontend app folder and that your backend is hosted separately or adapted for serverless functions.
+- Pushing to GitHub only triggers Vercel if the Vercel project is actually linked to this repo and auto-deploys are enabled.
+
+## QR Links
+
+Customers must open a valid link that contains both the table number and token. The manager QR generator now creates links like:
+
+`/frontend/scan/T1/<token>`
+
+That route redirects into the customer ordering page with the correct table context.
