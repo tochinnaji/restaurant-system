@@ -3,9 +3,6 @@
 -- Database Schema (MySQL)
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS restaurant_db;
-USE restaurant_db;
-
 -- Roles
 CREATE TABLE roles (
   role_id INT AUTO_INCREMENT PRIMARY KEY,
