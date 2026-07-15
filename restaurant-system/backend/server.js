@@ -10,29 +10,37 @@ const PORT = process.env.PORT || 3000;
 const frontendRoot = path.join(__dirname, '../frontend');
 const frontendDist = path.join(frontendRoot, 'dist');
 const frontendStaticRoot = fs.existsSync(frontendDist) ? frontendDist : frontendRoot;
+const serveFrontend = process.env.SERVE_FRONTEND === 'true';
 
 app.disable('x-powered-by');
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/frontend', express.static(frontendStaticRoot));
+if (serveFrontend) {
+  app.use('/frontend', express.static(frontendStaticRoot));
+}
 app.use('/api', require('./routes/index'));
 
 app.get('/', (req, res) => {
-  res.redirect('/frontend/customer');
+  if (serveFrontend) {
+    return res.redirect('/frontend/customer');
+  }
+  return res.json({ success: true, message: 'IRMS backend is running.' });
 });
 
 app.get('/health', (req, res) => {
   res.json({ success: true, status: 'ok' });
 });
 
-app.get('/frontend/*', (req, res) => {
-  if (frontendStaticRoot === frontendDist && fs.existsSync(path.join(frontendDist, 'index.html'))) {
-    return res.sendFile(path.join(frontendDist, 'index.html'));
-  }
-  return res.redirect('/frontend/customer');
-});
+if (serveFrontend) {
+  app.get('/frontend/*', (req, res) => {
+    if (frontendStaticRoot === frontendDist && fs.existsSync(path.join(frontendDist, 'index.html'))) {
+      return res.sendFile(path.join(frontendDist, 'index.html'));
+    }
+    return res.redirect('/frontend/customer');
+  });
+}
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found.' });
@@ -65,7 +73,7 @@ const seedUsers = async () => {
      ('System Admin', 'admin@restaurant.com', ?, 1),
      ('Restaurant Manager', 'manager@restaurant.com', ?, 2),
      ('Company CEO', 'ceo@restaurant.com', ?, 3),
-     ('Kitchen Staff', 'staff@restaurant.com', ?, 4)`,
+     ('Kitchen Staff', 'staff@restaurant.com', ?, 4)` ,
     [passwordHash, passwordHash, passwordHash, passwordHash]
   );
 };
@@ -78,7 +86,7 @@ const startServer = async () => {
     console.error('Startup seed skipped:', err.message);
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`Restaurant Management System running at http://localhost:${PORT}`);
     console.log(`API available at http://localhost:${PORT}/api`);
   });

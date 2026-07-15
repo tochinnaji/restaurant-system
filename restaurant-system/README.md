@@ -119,7 +119,7 @@ These are React routes served under `/frontend`:
 ## Deployment Notes
 
 - `BASE_URL` or `PUBLIC_BASE_URL` should be set to the public host used by the QR links.
-- If you deploy the frontend to Vercel, set the project root to `restaurant-system/frontend`, then add `VITE_API_BASE_URL` and `VITE_APP_BASE_PATH` in Vercel environment variables. Keep the backend on Railway or another Node host.
+- If you deploy the frontend to Vercel, set the project root to `restaurant-system/frontend`, then add `VITE_API_BASE_URL` and `VITE_APP_BASE_PATH` in Vercel environment variables. Keep the backend on Railway as API-only by leaving `SERVE_FRONTEND` unset or set to `false`.
 - Pushing to GitHub only triggers Vercel if the Vercel project is actually linked to this repo and auto-deploys are enabled.
 
 ## QR Links
