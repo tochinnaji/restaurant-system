@@ -1,12 +1,8 @@
-const API_BASE = (() => {
-  const raw = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
-  if (raw === '/api') return '/api';
-  if (raw.endsWith('/api')) return raw;
-  return `${raw}/api`;
-})();
+const API_BASE = '/api';
 
 function joinApiPath(path) {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const cleanedPath = path.startsWith('/api/') ? path.slice(4) : path;
+  const normalizedPath = cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
   return `${API_BASE}${normalizedPath}`;
 }
 
