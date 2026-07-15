@@ -13,7 +13,22 @@ const frontendStaticRoot = fs.existsSync(frontendDist) ? frontendDist : frontend
 const serveFrontend = process.env.SERVE_FRONTEND === 'true';
 
 app.disable('x-powered-by');
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+const corsOrigins = (process.env.CORS_ORIGIN || '*').split(',').map((value) => value.trim()).filter(Boolean);
+const corsOptions = corsOrigins.includes('*')
+  ? {}
+  : {
+      origin(origin, callback) {
+        if (!origin || corsOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+      },
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization']
+    };
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
