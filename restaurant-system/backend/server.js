@@ -14,18 +14,21 @@ const serveFrontend = process.env.SERVE_FRONTEND === 'true';
 
 app.disable('x-powered-by');
 const corsOrigins = (process.env.CORS_ORIGIN || '*').split(',').map((value) => value.trim()).filter(Boolean);
-const corsOptions = corsOrigins.includes('*')
-  ? {}
-  : {
-      origin(origin, callback) {
-        if (!origin || corsOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        return callback(new Error('Not allowed by CORS'));
-      },
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization']
-    };
+const isAllowedOrigin = (origin) => {
+  if (!origin || corsOrigins.includes('*')) return true;
+  if (corsOrigins.includes(origin)) return true;
+  return /^https:\/\/[^\s]+\.vercel\.app$/.test(origin);
+};
+const corsOptions = {
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
