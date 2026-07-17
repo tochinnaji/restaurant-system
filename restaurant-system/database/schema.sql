@@ -1,18 +1,38 @@
--- ============================================================
+﻿-- ============================================================
 -- INTELLIGENT RESTAURANT MANAGEMENT SYSTEM
 -- Database Schema (MySQL)
 -- ============================================================
 
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS preparation_time_records;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS restaurant_tables;
+DROP TABLE IF EXISTS stock_items;
+DROP TABLE IF EXISTS menu_items;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
 -- Roles
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
   role_id INT AUTO_INCREMENT PRIMARY KEY,
-  role_name VARCHAR(50) NOT NULL
+  role_name VARCHAR(50) NOT NULL UNIQUE
 );
 
-INSERT INTO roles (role_name) VALUES ('admin'), ('manager'), ('ceo'), ('staff');
+INSERT INTO roles (role_name) VALUES
+('admin'),
+('manager'),
+('ceo'),
+('staff');
 
 -- Users
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   user_id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(100) NOT NULL,
   email VARCHAR(100) UNIQUE NOT NULL,
@@ -23,15 +43,19 @@ CREATE TABLE users (
 );
 
 -- Categories
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
   category_id INT AUTO_INCREMENT PRIMARY KEY,
-  category_name VARCHAR(100) NOT NULL
+  category_name VARCHAR(100) NOT NULL UNIQUE
 );
 
-INSERT INTO categories (category_name) VALUES ('Main Course'), ('Drinks'), ('Desserts'), ('Snacks');
+INSERT INTO categories (category_name) VALUES
+('Main Course'),
+('Drinks'),
+('Desserts'),
+('Snacks');
 
 -- Menu Items
-CREATE TABLE menu_items (
+CREATE TABLE IF NOT EXISTS menu_items (
   menu_item_id INT AUTO_INCREMENT PRIMARY KEY,
   category_id INT NOT NULL,
   item_name VARCHAR(100) NOT NULL,
@@ -45,7 +69,7 @@ CREATE TABLE menu_items (
 );
 
 -- Tables (restaurant tables with QR codes)
-CREATE TABLE restaurant_tables (
+CREATE TABLE IF NOT EXISTS restaurant_tables (
   table_id INT AUTO_INCREMENT PRIMARY KEY,
   table_number VARCHAR(20) UNIQUE NOT NULL,
   qr_token VARCHAR(100) UNIQUE NOT NULL,
@@ -53,7 +77,7 @@ CREATE TABLE restaurant_tables (
 );
 
 -- Orders
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   order_id INT AUTO_INCREMENT PRIMARY KEY,
   table_number VARCHAR(20) NOT NULL,
   total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -65,7 +89,7 @@ CREATE TABLE orders (
 );
 
 -- Order Items
-CREATE TABLE order_items (
+CREATE TABLE IF NOT EXISTS order_items (
   order_item_id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
   menu_item_id INT NOT NULL,
@@ -77,7 +101,7 @@ CREATE TABLE order_items (
 );
 
 -- Payments
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
   payment_id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
   payment_reference VARCHAR(100) UNIQUE,
@@ -90,7 +114,7 @@ CREATE TABLE payments (
 );
 
 -- Stock Items
-CREATE TABLE stock_items (
+CREATE TABLE IF NOT EXISTS stock_items (
   stock_id INT AUTO_INCREMENT PRIMARY KEY,
   item_name VARCHAR(100) NOT NULL,
   quantity_available DECIMAL(10,2) DEFAULT 0,
@@ -100,7 +124,7 @@ CREATE TABLE stock_items (
 );
 
 -- Messages (customer to kitchen/reception)
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   message_id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
   table_number VARCHAR(20) NOT NULL,
@@ -112,7 +136,7 @@ CREATE TABLE messages (
 );
 
 -- Preparation Time Records
-CREATE TABLE preparation_time_records (
+CREATE TABLE IF NOT EXISTS preparation_time_records (
   record_id INT AUTO_INCREMENT PRIMARY KEY,
   menu_item_id INT NOT NULL,
   average_preparation_time INT NOT NULL COMMENT 'in minutes',
@@ -125,7 +149,7 @@ CREATE TABLE preparation_time_records (
 -- SAMPLE DATA
 -- ============================================================
 
--- Default admin user (password: Admin@123 — change in production)
+-- Default admin user (password: Admin@123 - change in production)
 INSERT INTO users (full_name, email, password, role_id) VALUES
 ('System Admin', 'admin@restaurant.com', '$2a$10$pvTJ/FW9KX4KrJ5ADXVrReY9enDAkax3ZDOT.u785UQzpg6jPomde', 1),
 ('Restaurant Manager', 'manager@restaurant.com', '$2a$10$pvTJ/FW9KX4KrJ5ADXVrReY9enDAkax3ZDOT.u785UQzpg6jPomde', 2),
@@ -164,4 +188,3 @@ INSERT INTO stock_items (item_name, quantity_available, unit, stock_status) VALU
 ('Palm Oil', 10.00, 'litres', 'available'),
 ('Egusi', 5.00, 'kg', 'low'),
 ('Tomatoes', 8.00, 'kg', 'available');
-  
