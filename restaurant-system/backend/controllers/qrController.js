@@ -1,7 +1,7 @@
-﻿const db = require('../config/db');
+const db = require('../config/db');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
-const { getPublicBaseUrl } = require('../utils/publicUrl');
+const { getFrontendPublicUrl } = require('../utils/publicUrl');
 
 const generateTableQR = async (req, res) => {
   const { table_number } = req.body;
@@ -13,7 +13,7 @@ const generateTableQR = async (req, res) => {
   try {
     const normalizedTableNumber = String(table_number).trim();
     const qrToken = uuidv4();
-    const baseUrl = getPublicBaseUrl(req);
+    const baseUrl = getFrontendPublicUrl(req);
     const orderUrl = `${baseUrl}/frontend/scan/${encodeURIComponent(normalizedTableNumber)}/${encodeURIComponent(qrToken)}`;
 
     // Save to DB

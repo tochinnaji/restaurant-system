@@ -12,6 +12,8 @@ import {
   LogOut,
   Menu,
   Package,
+  Ban,
+  RotateCcw,
   QrCode,
   RefreshCw,
   Send,
@@ -904,111 +906,131 @@ function ManagerDashboardPage() {
 }
 
 function OrdersPage() {
-  const pushToast = useToast();
-  const [orders, setOrders] = useState([]);
-  const [filter, setFilter] = useState('all');
-  const [expanded, setExpanded] = useState(null);
+    const pushToast = useToast();
+    const [orders, setOrders] = useState([]);
+    const [filter, setFilter] = useState('all');
+    const [expanded, setExpanded] = useState(null);
 
-  const load = async () => {
-    const res = await api.get('/orders');
-    if (!res.success) {
-      pushToast('danger', res.message || 'Failed to load orders.');
-      return;
+    const load = async () => {
+      const res = await api.get('/orders');
+      if (!res.success) {
+        pushToast('danger', res.message || 'Failed to load orders.');
+        return;
+      }
+      setOrders(res.data || []);
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const visible = filter === 'all' ? orders : orders.filter((order) => order.order_status === filter);
+
+    async function updateStatus(orderId, order_status) {
+      const res = await api.put(`/orders/${orderId}/status`, { order_status });
+      if (!res.success) {
+        pushToast('danger', res.message || 'Could not update order.');
+        return;
+      }
+      pushToast('success', `Order #${orderId} set to ${order_status}.`);
+      load();
     }
-    setOrders(res.data || []);
-  };
 
-  useEffect(() => { load(); }, []);
-
-  const visible = filter === 'all' ? orders : orders.filter((order) => order.order_status === filter);
-
-  async function updateStatus(orderId, order_status) {
-    const res = await api.put(`/orders/${orderId}/status`, { order_status });
-    if (!res.success) {
-      pushToast('danger', res.message || 'Could not update order.');
-      return;
+    async function reversePayment(orderId) {
+      const res = await api.put('/payment/reverse', { order_id: orderId });
+      if (!res.success) {
+        pushToast('danger', res.message || 'Could not reverse payment.');
+        return;
+      }
+      pushToast('success', `Payment reversed for order #${orderId}.`);
+      load();
     }
-    pushToast('success', `Order #${orderId} set to ${order_status}.`);
-    load();
-  }
 
-  async function showItems(orderId) {
-    setExpanded(orderId);
-    if (!orderId) return;
-    const res = await api.get(`/orders/${orderId}`);
-    if (res.success) {
-      setOrders((current) =>
-        current.map((order) => (order.order_id === orderId ? { ...order, items: res.data.items } : order))
-      );
+    async function showItems(orderId) {
+      setExpanded(orderId);
+      if (!orderId) return;
+      const res = await api.get(`/orders/${orderId}`);
+      if (res.success) {
+        setOrders((current) =>
+          current.map((order) => (order.order_id === orderId ? { ...order, items: res.data.items } : order))
+        );
+      }
     }
-  }
 
-  return (
-    <div className="page-stack">
-      <div className="toolbar">
-        <div className="segmented">
-          {['all', 'pending', 'preparing', 'ready', 'delivered', 'cancelled'].map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={classNames('segment', filter === value && 'active')}
-              onClick={() => setFilter(value)}
-            >
-              {value}
-            </button>
-          ))}
+    return (
+      <div className="page-stack">
+        <div className="toolbar">
+          <div className="segmented">
+            {['all', 'pending', 'preparing', 'ready', 'delivered', 'cancelled'].map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={classNames('segment', filter === value && 'active')}
+                onClick={() => setFilter(value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+          <Button icon={RefreshCw} variant="secondary" onClick={load}>Refresh</Button>
         </div>
-        <Button icon={RefreshCw} variant="secondary" onClick={load}>Refresh</Button>
-      </div>
 
-      <div className="card-grid">
-        {visible.map((order) => {
-          const nextMap = { pending: 'preparing', preparing: 'ready', ready: 'delivered' };
-          return (
-            <article key={order.order_id} className="order-card">
-              <div className="order-head">
-                <strong>Order #{order.order_id}</strong>
-                <span className={badgeClass(order.order_status)}>{order.order_status}</span>
-              </div>
-              <div className="list-row">
-                <span>Table {order.table_number}</span>
-                <span>{formatDate(order.created_at)}</span>
-              </div>
-              <div className="list-row">
-                <span>Total</span>
-                <strong>{formatNaira(order.total_amount)}</strong>
-              </div>
-              <div className="list-row">
-                <span>Payment</span>
-                <span className={badgeClass(order.payment_status)}>{order.payment_status}</span>
-              </div>
-              <div className="card-actions">
-                {nextMap[order.order_status] ? (
-                  <Button icon={ChevronActionIcon(order.order_status)} onClick={() => updateStatus(order.order_id, nextMap[order.order_status])}>
-                    {nextMap[order.order_status]}
-                  </Button>
-                ) : null}
-                <Button icon={Eye} variant="secondary" onClick={() => showItems(order.order_id)}>Items</Button>
-              </div>
-              {expanded === order.order_id && Array.isArray(order.items) ? (
-                <div className="mini-list">
-                  {order.items.map((item) => (
-                    <div key={`${item.order_item_id}-${item.menu_item_id}`} className="list-row">
-                      <span>{item.item_name} x{item.quantity}</span>
-                      <strong>{formatNaira(item.subtotal)}</strong>
-                    </div>
-                  ))}
+        <div className="card-grid">
+          {visible.map((order) => {
+            const nextMap = { pending: 'preparing', preparing: 'ready', ready: 'delivered' };
+            return (
+              <article key={order.order_id} className="order-card">
+                <div className="order-head">
+                  <strong>Order #{order.order_id}</strong>
+                  <span className={badgeClass(order.order_status)}>{order.order_status}</span>
                 </div>
-              ) : null}
-            </article>
-          );
-        })}
+                <div className="list-row">
+                  <span>Table {order.table_number}</span>
+                  <span>{formatDate(order.created_at)}</span>
+                </div>
+                <div className="list-row">
+                  <span>Total</span>
+                  <strong>{formatNaira(order.total_amount)}</strong>
+                </div>
+                <div className="list-row">
+                  <span>Payment</span>
+                  <span className={badgeClass(order.payment_status)}>{order.payment_status}</span>
+                </div>
+                <div className="card-actions">
+                  {nextMap[order.order_status] ? (
+                    <Button icon={ChevronActionIcon(order.order_status)} onClick={() => updateStatus(order.order_id, nextMap[order.order_status])}>
+                      {nextMap[order.order_status]}
+                    </Button>
+                  ) : null}
+                  {order.order_status !== 'cancelled' ? (
+                    <Button icon={Ban} variant="danger" onClick={() => updateStatus(order.order_id, 'cancelled')}>
+                      Cancel
+                    </Button>
+                  ) : null}
+                  {order.payment_status === 'paid' ? (
+                    <Button icon={RotateCcw} variant="warning" onClick={() => reversePayment(order.order_id)}>
+                      Reverse payment
+                    </Button>
+                  ) : null}
+                  <Button icon={Eye} variant="secondary" onClick={() => showItems(order.order_id)}>Items</Button>
+                </div>
+                {expanded === order.order_id && Array.isArray(order.items) ? (
+                  <div className="mini-list">
+                    {order.items.map((item) => (
+                      <div key={`${item.order_item_id}-${item.menu_item_id}`} className="list-row">
+                        <span>{item.item_name} x{item.quantity}</span>
+                        <strong>{formatNaira(item.subtotal)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function ChevronActionIcon(orderStatus) {
+  function ChevronActionIcon(orderStatus) {
   if (orderStatus === 'pending') return ChefHat;
   if (orderStatus === 'preparing') return Star;
   if (orderStatus === 'ready') return Download;
@@ -1573,7 +1595,7 @@ function Modal({ open, title, onClose, children }) {
       <div className="modal-card">
         <div className="modal-head">
           <strong>{title}</strong>
-          <button type="button" className="icon-btn" onClick={onClose}>ÃƒÆ’Ã¢â‚¬â€</button>
+          <button type="button" className="icon-btn" onClick={onClose}>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â</button>
         </div>
         {children}
       </div>

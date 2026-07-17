@@ -5,7 +5,7 @@ const { authMiddleware, roleMiddleware } = require('../middleware/auth');
 const { login, register, getAllUsers } = require('../controllers/authController');
 const { getAllMenuItems, getMenuByCategory, addMenuItem, updateMenuItem, deleteMenuItem } = require('../controllers/menuController');
 const { placeOrder, getOrderById, getAllOrders, updateOrderStatus, getDashboardSummary } = require('../controllers/orderController');
-const { initializePayment, verifyPayment } = require('../controllers/paymentController');
+const { initializePayment, verifyPayment, reversePayment } = require('../controllers/paymentController');
 const { sendMessage, getAllMessages, respondToMessage, markMessageRead } = require('../controllers/messageController');
 const { getAllStock, addStockItem, updateStock } = require('../controllers/stockController');
 const { generateTableQR, getAllTables } = require('../controllers/qrController');
@@ -31,6 +31,7 @@ router.get('/prep-times', authMiddleware, roleMiddleware('admin', 'manager', 'ce
 
 router.post('/payment/initialize', initializePayment);
 router.get('/payment/verify', verifyPayment);
+router.put('/payment/reverse', authMiddleware, roleMiddleware('admin', 'manager'), reversePayment);
 
 router.post('/messages', sendMessage);
 router.get('/messages', authMiddleware, roleMiddleware('admin', 'manager', 'staff'), getAllMessages);

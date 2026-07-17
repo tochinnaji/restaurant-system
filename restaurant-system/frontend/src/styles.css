@@ -690,3 +690,57 @@ body {
     flex-basis: 118px;
   }
 }
+.btn-danger {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.48);
+  color: #ffd2d0;
+}
+
+.btn-warning {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.48);
+  color: #ffe4b0;
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.24);
+  border-color: rgba(239, 68, 68, 0.72);
+  color: #fff2f1;
+}
+
+.btn-warning:hover {
+  background: rgba(245, 158, 11, 0.24);
+  border-color: rgba(245, 158, 11, 0.72);
+  color: #fff0d0;
+}
+
+.btn-danger svg,
+.btn-warning svg {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.08));
+}
+
+[data-theme="light"] .btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+[data-theme="light"] .btn-warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+[data-theme="light"] .btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #7f1d1d;
+}
+
+[data-theme="light"] .btn-warning:hover {
+  background: rgba(245, 158, 11, 0.22);
+  color: #92400e;
+}
+
+[data-theme="light"] .theme-fab,
+[data-theme="light"] .btn-secondary,
+[data-theme="light"] .btn-ghost {
+  color: #1f1a17;
+}

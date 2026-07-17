@@ -1,6 +1,6 @@
-﻿const db = require('../config/db');
+const db = require('../config/db');
 const https = require('https');
-const { getPublicBaseUrl } = require('../utils/publicUrl');
+const { getBackendPublicUrl, getFrontendPublicUrl } = require('../utils/publicUrl');
 
 const safeJsonParse = (data) => {
   try {
@@ -40,7 +40,7 @@ const initializePayment = async (req, res) => {
       email,
       amount: amountInKobo,
       metadata: { order_id, table_number: order.table_number, table_token: tableToken },
-      callback_url: `${getPublicBaseUrl(req)}/api/payment/verify`
+      callback_url: `${getBackendPublicUrl(req)}/api/payment/verify`
     });
 
     const options = {
@@ -124,7 +124,7 @@ const verifyPayment = async (req, res) => {
         try {
           const response = safeJsonParse(data);
           if (!response) {
-            return res.redirect('/frontend/customer/payment-failed');
+            return res.redirect(`${getFrontendPublicUrl(req)}/customer/payment-failed`);
           }
 
           if (response.status && response.data.status === 'success') {
@@ -151,9 +151,9 @@ const verifyPayment = async (req, res) => {
           if (orderId) query.set('order_id', orderId);
           if (tableNumber) query.set('table', tableNumber);
           if (tableToken) query.set('token', tableToken);
-          res.redirect(`/frontend/customer/payment-success?${query.toString()}`);
+          res.redirect(`${getFrontendPublicUrl(req)}/customer/payment-success?${query.toString()}`);
           } else {
-            res.redirect('/frontend/customer/payment-failed');
+            res.redirect(`${getFrontendPublicUrl(req)}/customer/payment-failed`);
           }
       } catch (err) {
         console.error('Verify payment processing error:', err);
@@ -170,4 +170,38 @@ const verifyPayment = async (req, res) => {
   paystackReq.end();
 };
 
-module.exports = { initializePayment, verifyPayment };
+
+const reversePayment = async (req, res) => {
+  const { order_id } = req.body;
+
+  if (!order_id || !Number.isInteger(Number(order_id)) || Number(order_id) <= 0) {
+    return res.status(400).json({ success: false, message: 'Order ID is required.' });
+  }
+
+  try {
+    const [orders] = await db.query('SELECT * FROM orders WHERE order_id = ?', [order_id]);
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    const [payments] = await db.query('SELECT * FROM payments WHERE order_id = ? ORDER BY payment_id DESC LIMIT 1', [order_id]);
+    if (payments.length === 0) {
+      return res.status(404).json({ success: false, message: 'Payment record not found.' });
+    }
+
+    await db.query(
+      `UPDATE payments
+       SET payment_status = 'failed', payment_method = NULL, paid_at = NULL
+       WHERE order_id = ?`,
+      [order_id]
+    );
+
+    await db.query('UPDATE orders SET payment_status = "unpaid" WHERE order_id = ?', [order_id]);
+
+    res.json({ success: true, message: 'Payment reversed.' });
+  } catch (err) {
+    console.error('Reverse payment error:', err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+};
+module.exports = { initializePayment, verifyPayment, reversePayment };
