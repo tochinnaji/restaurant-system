@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, NavLink, Route, BrowserRouter, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -48,6 +48,8 @@ function appPath(path) {
 }
 
 const ToastContext = createContext(null);
+const ThemeContext = createContext(null);
+const THEME_STORAGE_KEY = 'irms_theme';
 
 function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -77,11 +79,53 @@ function useToast() {
   return useContext(ToastContext);
 }
 
+function getInitialTheme() {
+  if (typeof window === 'undefined') return 'dark';
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const value = useMemo(() => ({
+    theme,
+    setTheme,
+    toggleTheme: () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }), [theme]);
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+function useTheme() {
+  return useContext(ThemeContext);
+}
+
+function ThemeToggleFab() {
+  const theme = useTheme();
+  if (!theme) return null;
+  const isDark = theme.theme === 'dark';
+
+  return (
+    <button type="button" className="btn btn-secondary theme-fab" onClick={theme.toggleTheme}>
+      {isDark ? <SunMedium size={16} /> : <MoonStar size={16} />}
+      <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
+    </button>
+  );
+}
 function App() {
   return (
     <BrowserRouter basename={APP_BASE_PATH === '/' ? '/' : APP_BASE_PATH}>
-      <ToastProvider>
-        <Routes>
+      <ThemeProvider>
+        <ToastProvider>
+          <Routes>
           <Route path="/" element={<Navigate to="/customer" replace />} />
           <Route path="/shared/login" element={<LoginPage />} />
           <Route path="/scan/:tableNumber/:token" element={<ScanRedirectPage />} />
@@ -103,8 +147,10 @@ function App() {
           </Route>
 
           <Route path="*" element={<Navigate to="/customer" replace />} />
-        </Routes>
-      </ToastProvider>
+          </Routes>
+          <ThemeToggleFab />
+        </ToastProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
@@ -1527,7 +1573,7 @@ function Modal({ open, title, onClose, children }) {
       <div className="modal-card">
         <div className="modal-head">
           <strong>{title}</strong>
-          <button type="button" className="icon-btn" onClick={onClose}>Ã—</button>
+          <button type="button" className="icon-btn" onClick={onClose}>ÃƒÆ’Ã¢â‚¬â€</button>
         </div>
         {children}
       </div>

@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: dark;
   --bg: #11100f;
   --bg-soft: #171413;
@@ -459,4 +459,234 @@ button, input, select, textarea { font: inherit; }
   .customer-topbar, .workspace-topline, .page-header, .toolbar { flex-direction: column; align-items: stretch; }
   .inline-form, .summary-grid, .two-column, .stat-grid { grid-template-columns: 1fr; }
   .data-table { min-width: 640px; }
+}:root {
+  --bg: #121212;
+  --bg-soft: #171717;
+  --sidebar: #1B1B1B;
+  --surface: #252525;
+  --surface-2: #2D2D2D;
+  --line: #373737;
+  --text: #FFFFFF;
+  --muted: #B0B0B0;
+  --accent: #D65A00;
+  --accent-hover: #F57C00;
+  --success: #22C55E;
+  --info: #3B82F6;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+}
+
+html, body, #root {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.sidebar,
+.panel,
+.stat-card,
+.order-card,
+.auth-card,
+.status-card,
+.customer-topbar,
+.notice,
+.modal-card,
+.toast,
+.input,
+.btn-secondary,
+.theme-fab {
+  background: var(--surface);
+}
+
+.nav-link.active,
+.nav-link:hover,
+.btn-secondary:hover,
+.theme-fab:hover,
+.btn-ghost:hover,
+.segment:hover,
+.category-btn:hover {
+  background: var(--surface-2);
+}
+
+.btn,
+.icon-btn,
+.segment,
+.category-btn {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  color: #1a120a;
+  border-color: transparent;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.03);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-secondary {
+  color: var(--text);
+}
+
+.category-strip {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  padding-bottom: 4px;
+  align-items: stretch;
+}
+
+.category-btn {
+  min-width: 140px;
+  flex: 0 0 140px;
+  min-height: 44px;
+}
+
+.menu-grid,
+.card-grid {
+  align-items: stretch;
+}
+
+.order-card,
+.menu-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+}
+
+.menu-card-foot {
+  margin-top: auto;
+}
+
+.menu-card.muted {
+  opacity: 0.72;
+}
+
+.customer-topbar {
+  border: 1px solid var(--line);
+}
+
+.input {
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.modal-card,
+.toast,
+.sidebar,
+.panel,
+.stat-card,
+.order-card,
+.auth-card,
+.status-card,
+.customer-topbar,
+.notice,
+.input,
+.btn-secondary,
+.theme-fab {
+  border-color: var(--line);
+}
+
+.theme-fab {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 2100;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.theme-fab span {
+  white-space: nowrap;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f2ec;
+  --bg-soft: #fbf8f4;
+  --sidebar: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4eee6;
+  --line: #ddd4c8;
+  --text: #1f1a17;
+  --muted: #695f56;
+  --shadow: 0 16px 32px rgba(47, 34, 19, 0.08);
+}
+
+[data-theme="light"] .btn-primary {
+  color: #1a120a;
+}
+
+[data-theme="light"] .badge-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+[data-theme="light"] .badge-info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
+
+[data-theme="light"] .badge-warning {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+[data-theme="light"] .badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+}
+
+[data-theme="light"] .badge-muted {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--muted);
+}
+
+[data-theme="light"] .notice-danger {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+[data-theme="light"] .notice-info {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+[data-theme="light"] .response-copy {
+  color: #166534;
+}
+
+@media (max-width: 720px) {
+  .theme-fab {
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    justify-content: center;
+  }
+
+  .customer-actions .btn,
+  .page-actions .btn,
+  .toolbar .btn,
+  .notice-actions .btn {
+    width: 100%;
+  }
+
+  .category-btn {
+    min-width: 118px;
+    flex-basis: 118px;
+  }
 }
