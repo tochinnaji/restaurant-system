@@ -1,4 +1,4 @@
-﻿const normalizeBaseUrl = (value) => {
+const normalizeBaseUrl = (value) => {
   if (!value) return '';
   return String(value).trim().replace(/\/$/, '');
 };
@@ -18,7 +18,11 @@ const getRequestBaseUrl = (req) => {
 };
 
 const getPublicBaseUrl = (req) => {
-  const configured = normalizeBaseUrl(process.env.PUBLIC_BASE_URL || process.env.BASE_URL);
+  const configured = normalizeBaseUrl(
+    process.env.FRONTEND_PUBLIC_URL ||
+    process.env.PUBLIC_BASE_URL ||
+    process.env.BASE_URL
+  );
   if (configured) {
     return configured;
   }
