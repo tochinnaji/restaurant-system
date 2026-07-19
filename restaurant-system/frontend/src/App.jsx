@@ -44,6 +44,21 @@ const APP_NAME = 'IRMS';
 const BRAND_ICON = `${import.meta.env.BASE_URL}brand/irms-sidebar-icon.png`;
 const BRAND_LOGO = `${import.meta.env.BASE_URL}brand/irms-selected-logo-source.png`;
 const APP_BASE_PATH = (import.meta.env.VITE_APP_BASE_PATH || '/frontend').replace(/\/+$/, '') || '/';
+const QR_CONTEXT_KEY = 'irms_qr_context';
+
+function readStoredQrContext() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return JSON.parse(window.localStorage.getItem(QR_CONTEXT_KEY) || 'null');
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveQrContext(tableNumber, token) {
+  if (typeof window === 'undefined' || !tableNumber || !token) return;
+  window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify({ tableNumber, token }));
+}
 
 function appPath(path) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -117,12 +132,19 @@ function ThemeToggleFab() {
   const isDark = theme.theme === 'dark';
 
   return (
-    <button type="button" className="btn btn-secondary theme-fab" onClick={theme.toggleTheme}>
+    <button
+      type="button"
+      className="btn btn-secondary theme-fab"
+      onClick={theme.toggleTheme}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Light mode' : 'Dark mode'}
+    >
       {isDark ? <SunMedium size={16} /> : <MoonStar size={16} />}
-      <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
+      <span className="theme-fab-label">{isDark ? 'Light mode' : 'Dark mode'}</span>
     </button>
   );
 }
+
 function App() {
   return (
     <BrowserRouter basename={APP_BASE_PATH === '/' ? '/' : APP_BASE_PATH}>
@@ -427,8 +449,11 @@ function LoginPage() {
 function CustomerPage() {
   const pushToast = useToast();
   const [searchParams] = useSearchParams();
-  const tableNumber = searchParams.get('table') || 'T1';
-  const qrToken = searchParams.get('token') || '';
+  const storedQrContext = useMemo(readStoredQrContext, []);
+  const urlTableNumber = searchParams.get('table');
+  const urlQrToken = searchParams.get('token');
+  const tableNumber = urlTableNumber || storedQrContext?.tableNumber || 'T1';
+  const qrToken = urlQrToken || (storedQrContext?.tableNumber === tableNumber ? storedQrContext?.token : '') || '';
   const [menu, setMenu] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [cart, setCart] = useState([]);
@@ -441,6 +466,12 @@ function CustomerPage() {
   const [messageText, setMessageText] = useState('');
   const [paymentEmail, setPaymentEmail] = useState('');
   const [loadingOrder, setLoadingOrder] = useState(false);
+
+  useEffect(() => {
+    if (urlQrToken) {
+      saveQrContext(tableNumber, urlQrToken);
+    }
+  }, [tableNumber, urlQrToken]);
 
   useEffect(() => {
     api.get('/menu').then((res) => {
@@ -744,8 +775,9 @@ function CustomerPage() {
 function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('order_id');
-  const table = searchParams.get('table');
-  const token = searchParams.get('token');
+  const storedQrContext = readStoredQrContext();
+  const table = searchParams.get('table') || storedQrContext?.tableNumber;
+  const token = searchParams.get('token') || storedQrContext?.token;
 
   return (
     <div className="status-page success">
