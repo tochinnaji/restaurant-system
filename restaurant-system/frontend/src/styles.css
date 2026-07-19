@@ -836,3 +836,20 @@ body {
   background: #efe6db;
   border-color: #cfae84;
 }
+:root:not([data-theme="light"]) .notice-danger,
+[data-theme="dark"] .notice-danger {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.24), rgba(127, 29, 29, 0.28));
+  border-color: rgba(239, 68, 68, 0.72);
+  color: #ffe4e2;
+  box-shadow: 0 12px 26px rgba(239, 68, 68, 0.14);
+}
+
+:root:not([data-theme="light"]) .category-btn:hover,
+:root:not([data-theme="light"]) .category-btn:focus-visible,
+[data-theme="dark"] .category-btn:hover,
+[data-theme="dark"] .category-btn:focus-visible {
+  background: rgba(245, 124, 0, 0.18);
+  border-color: rgba(245, 124, 0, 0.72);
+  color: #ffd8a6;
+  box-shadow: 0 10px 22px rgba(214, 90, 0, 0.18);
+}
