@@ -29,7 +29,6 @@ export function badgeClass(status) {
     ready: 'badge badge-success',
     delivered: 'badge badge-muted',
     cancelled: 'badge badge-danger',
-    unavailable: 'badge badge-danger',
     paid: 'badge badge-success',
     unpaid: 'badge badge-warning',
     failed: 'badge badge-danger',

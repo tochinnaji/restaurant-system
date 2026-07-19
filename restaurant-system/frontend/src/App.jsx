@@ -870,7 +870,7 @@ function ManagerDashboardPage() {
                     <strong>{item.item_name}</strong>
                     <div>{item.quantity_available} {item.unit}</div>
                   </div>
-                  <span className={badgeClass(item.stock_status)}>{item.stock_status.replace('_', ' ')}</span>
+                  <span className={badgeClass(item.stock_status === 'unavailable' ? 'out_of_stock' : item.stock_status)}>{item.stock_status === 'unavailable' || item.stock_status === 'out_of_stock' ? 'out of stock' : item.stock_status.replace('_', ' ')}</span>
                 </div>
               ))}
             </div>
@@ -1259,7 +1259,7 @@ function StockPage() {
                 <>
                   <div className="order-head">
                     <strong>{item.item_name}</strong>
-                    <span className={badgeClass(item.stock_status)}>{item.stock_status.replace('_', ' ')}</span>
+                    <span className={badgeClass(item.stock_status === 'unavailable' ? 'out_of_stock' : item.stock_status)}>{item.stock_status === 'unavailable' || item.stock_status === 'out_of_stock' ? 'out of stock' : item.stock_status.replace('_', ' ')}</span>
                   </div>
                   <div className="list-row"><span>Quantity</span><strong>{item.quantity_available}</strong></div>
                   <div className="list-row"><span>Unit</span><strong>{item.unit}</strong></div>

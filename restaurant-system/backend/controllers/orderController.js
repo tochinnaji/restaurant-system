@@ -46,7 +46,7 @@ const placeOrder = async (req, res) => {
         await conn.rollback();
         return res.status(400).json({
           success: false,
-          message: `Item ID ${item.menu_item_id} is unavailable or does not exist.`
+          message: `Item ID ${item.menu_item_id} is out of stock or does not exist.`
         });
       }
       const menuItem = rows[0];
