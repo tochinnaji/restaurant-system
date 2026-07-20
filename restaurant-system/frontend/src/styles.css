@@ -1102,3 +1102,54 @@ body {
 [data-theme="light"] .message-thread .response-copy {
   color: #166534;
 }
+.menu-grid {
+  grid-template-columns: repeat(auto-fill, minmax(270px, 320px));
+  justify-content: start;
+}
+
+.segment,
+.category-btn,
+.segment.active,
+.category-btn.active,
+.segment.active:hover,
+.category-btn.active:hover,
+.segment.active:focus-visible,
+.category-btn.active:focus-visible {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.segment.active,
+.category-btn.active {
+  color: #241607;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .segmented .segment:hover:not(.active),
+  .segmented .segment:focus-visible:not(.active),
+  .category-strip .category-btn:hover:not(.active),
+  .category-strip .category-btn:focus-visible:not(.active) {
+    transform: translateY(-1px);
+    background: rgba(245, 124, 0, 0.16);
+    border-color: rgba(245, 124, 0, 0.62);
+    color: #ffd6a1;
+    box-shadow: 0 10px 20px rgba(214, 90, 0, 0.14);
+  }
+
+  [data-theme="light"] .segmented .segment:hover:not(.active),
+  [data-theme="light"] .segmented .segment:focus-visible:not(.active),
+  [data-theme="light"] .category-strip .category-btn:hover:not(.active),
+  [data-theme="light"] .category-strip .category-btn:focus-visible:not(.active) {
+    background: rgba(245, 124, 0, 0.12);
+    border-color: rgba(214, 90, 0, 0.46);
+    color: #6f3300;
+  }
+}
+
+@media (max-width: 720px) {
+  .menu-grid {
+    grid-template-columns: 1fr;
+  }
+}

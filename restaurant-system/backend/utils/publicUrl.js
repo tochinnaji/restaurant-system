@@ -18,18 +18,31 @@ const getRequestBaseUrl = (req) => {
 };
 
 const getBackendPublicUrl = (req) => {
-  const configured = normalizeBaseUrl(process.env.PUBLIC_BASE_URL || process.env.BASE_URL);
+  const requestBaseUrl = getRequestBaseUrl(req);
+  const configured = normalizeBaseUrl(
+    process.env.BACKEND_PUBLIC_URL ||
+    process.env.PUBLIC_BACKEND_URL ||
+    process.env.RAILWAY_PUBLIC_URL ||
+    process.env.PUBLIC_BASE_URL ||
+    process.env.BASE_URL
+  );
+
   if (configured) {
+    const configuredLooksFrontend = /vercel\.app|localhost:5173/i.test(configured);
+    const requestLooksBackend = requestBaseUrl && !/vercel\.app|localhost:5173/i.test(requestBaseUrl);
+    if (configuredLooksFrontend && requestLooksBackend) {
+      return requestBaseUrl;
+    }
     return configured;
   }
 
-  const requestBaseUrl = getRequestBaseUrl(req);
   if (requestBaseUrl) {
     return requestBaseUrl;
   }
 
   return `http://localhost:${process.env.PORT || 3000}`;
 };
+
 
 const getFrontendPublicUrl = (req) => {
   const configured = normalizeBaseUrl(
