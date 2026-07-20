@@ -14,7 +14,8 @@ const generateTableQR = async (req, res) => {
     const normalizedTableNumber = String(table_number).trim();
     const qrToken = uuidv4();
     const baseUrl = getFrontendPublicUrl(req);
-    const orderUrl = `${baseUrl}/frontend/scan/${encodeURIComponent(normalizedTableNumber)}/${encodeURIComponent(qrToken)}`;
+    const frontendBasePath = (process.env.FRONTEND_APP_BASE_PATH || process.env.VITE_APP_BASE_PATH || '').replace(/\/+$/, '');
+    const orderUrl = `${baseUrl}${frontendBasePath}/scan/${encodeURIComponent(normalizedTableNumber)}/${encodeURIComponent(qrToken)}`;
 
     // Save to DB
     await db.query(

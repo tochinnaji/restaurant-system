@@ -154,6 +154,7 @@ function App() {
           <Route path="/" element={<Navigate to="/customer" replace />} />
           <Route path="/shared/login" element={<LoginPage />} />
           <Route path="/scan/:tableNumber/:token" element={<ScanRedirectPage />} />
+          <Route path="/frontend/scan/:tableNumber/:token" element={<ScanRedirectPage />} />
           <Route path="/customer" element={<CustomerPage />} />
           <Route path="/customer/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/customer/payment-failed" element={<PaymentFailedPage />} />
