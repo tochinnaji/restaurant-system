@@ -1041,3 +1041,48 @@ body {
     box-shadow: 0 8px 18px rgba(214, 90, 0, 0.22);
   }
 }
+.segment,
+.category-btn {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.segment.active,
+.category-btn.active {
+  font-weight: 500;
+  color: #201308;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .segment:hover:not(.active),
+  .segment:focus-visible:not(.active),
+  .category-btn:hover:not(.active),
+  .category-btn:focus-visible:not(.active) {
+    transform: translateY(-1px);
+    background: rgba(245, 124, 0, 0.14);
+    border-color: rgba(245, 124, 0, 0.55);
+    color: #ffd7a3;
+    box-shadow: 0 10px 20px rgba(214, 90, 0, 0.14);
+  }
+
+  [data-theme="light"] .segment:hover:not(.active),
+  [data-theme="light"] .segment:focus-visible:not(.active),
+  [data-theme="light"] .category-btn:hover:not(.active),
+  [data-theme="light"] .category-btn:focus-visible:not(.active) {
+    background: rgba(245, 124, 0, 0.12);
+    border-color: rgba(214, 90, 0, 0.42);
+    color: #6f3300;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .segment,
+  .category-btn,
+  .segment.active,
+  .category-btn.active {
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
