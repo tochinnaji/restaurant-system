@@ -1086,3 +1086,19 @@ body {
     font-weight: 500;
   }
 }
+.message-thread {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.message-thread .response-copy {
+  color: #bff0d1;
+}
+
+[data-theme="light"] .message-thread .response-copy {
+  color: #166534;
+}

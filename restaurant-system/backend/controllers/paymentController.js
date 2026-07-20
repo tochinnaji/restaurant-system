@@ -115,15 +115,16 @@ const initializePayment = async (req, res) => {
 const verifyPayment = async (req, res) => {
   const { reference } = req.query;
   const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
+  const frontendUrl = getFrontendPublicUrl(req);
 
   if (!reference) {
-    return res.status(400).json({ success: false, message: 'Payment reference is required.' });
+    return res.redirect(`${frontendUrl}/customer/payment-failed`);
   }
 
   const options = {
     hostname: 'api.paystack.co',
     port: 443,
-    path: `/transaction/verify/${reference}`,
+    path: `/transaction/verify/${encodeURIComponent(reference)}`,
     method: 'GET',
     headers: {
       Authorization: `Bearer ${paystackSecretKey}`
@@ -131,53 +132,60 @@ const verifyPayment = async (req, res) => {
   };
 
   const paystackReq = https.request(options, (paystackRes) => {
-      let data = '';
-      paystackRes.on('data', (chunk) => { data += chunk; });
-      paystackRes.on('end', async () => {
-        try {
-          const response = safeJsonParse(data);
-          if (!response) {
-            return res.redirect(`${getFrontendPublicUrl(req)}/customer/payment-failed`);
-          }
+    let data = '';
+    paystackRes.on('data', (chunk) => { data += chunk; });
+    paystackRes.on('end', async () => {
+      try {
+        const response = safeJsonParse(data);
+        if (!response || !response.status || response.data?.status !== 'success') {
+          return res.redirect(`${frontendUrl}/customer/payment-failed`);
+        }
 
-          if (response.status && response.data.status === 'success') {
-          const { reference: ref, paid_at, channel, metadata } = response.data;
-          const orderId = metadata?.order_id;
-          const tableNumber = metadata?.table_number;
-          const tableToken = metadata?.table_token;
+        const { reference: ref, paid_at, channel, metadata = {} } = response.data;
+        const [paymentRows] = await db.query('SELECT order_id FROM payments WHERE payment_reference = ? LIMIT 1', [ref]);
+        const orderId = metadata.order_id || paymentRows[0]?.order_id;
 
-          await db.query(
-            `UPDATE payments SET payment_status='successful', payment_method=?, paid_at=?
-             WHERE payment_reference=?`,
-            [channel, new Date(paid_at), ref]
+        if (!orderId) {
+          console.error('Payment verified but order could not be resolved:', { reference: ref, metadata });
+          return res.redirect(`${frontendUrl}/customer/payment-failed`);
+        }
+
+        const [orderRows] = await db.query('SELECT table_number FROM orders WHERE order_id = ? LIMIT 1', [orderId]);
+        const tableNumber = metadata.table_number || orderRows[0]?.table_number;
+        let tableToken = metadata.table_token;
+
+        if (!tableToken && tableNumber) {
+          const [tables] = await db.query(
+            'SELECT qr_token FROM restaurant_tables WHERE table_number = ? AND is_active = TRUE ORDER BY table_id DESC LIMIT 1',
+            [tableNumber]
           );
+          tableToken = tables[0]?.qr_token;
+        }
 
-          if (orderId) {
-            await db.query(
-              'UPDATE orders SET payment_status="paid" WHERE order_id=?',
-              [orderId]
-            );
-          }
+        await db.query(
+          `UPDATE payments
+           SET payment_status = 'successful', payment_method = ?, paid_at = ?
+           WHERE payment_reference = ?`,
+          [channel || null, paid_at ? new Date(paid_at) : new Date(), ref]
+        );
 
-          // Redirect to confirmation page
-          const query = new URLSearchParams();
-          if (orderId) query.set('order_id', orderId);
-          if (tableNumber) query.set('table', tableNumber);
-          if (tableToken) query.set('token', tableToken);
-          res.redirect(`${getFrontendPublicUrl(req)}/customer/payment-success?${query.toString()}`);
-          } else {
-            res.redirect(`${getFrontendPublicUrl(req)}/customer/payment-failed`);
-          }
+        await db.query('UPDATE orders SET payment_status = "paid" WHERE order_id = ?', [orderId]);
+
+        const query = new URLSearchParams();
+        query.set('order_id', orderId);
+        if (tableNumber) query.set('table', tableNumber);
+        if (tableToken) query.set('token', tableToken);
+        return res.redirect(`${frontendUrl}/customer/payment-success?${query.toString()}`);
       } catch (err) {
         console.error('Verify payment processing error:', err);
-        res.status(500).json({ success: false, message: 'Error processing verification.' });
+        return res.redirect(`${frontendUrl}/customer/payment-failed`);
       }
     });
   });
 
   paystackReq.on('error', (err) => {
     console.error('Paystack verify error:', err);
-    res.status(500).json({ success: false, message: 'Payment gateway error.' });
+    return res.redirect(`${frontendUrl}/customer/payment-failed`);
   });
 
   paystackReq.end();

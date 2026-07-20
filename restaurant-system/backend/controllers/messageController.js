@@ -38,6 +38,34 @@ const getAllMessages = async (req, res) => {
   }
 };
 
+
+const getOrderMessages = async (req, res) => {
+  const { orderId } = req.params;
+  const { table_number } = req.query;
+
+  if (!isPositiveInteger(orderId) || !table_number) {
+    return res.status(400).json({ success: false, message: 'Order ID and table number are required.' });
+  }
+
+  try {
+    const [orders] = await db.query('SELECT order_id FROM orders WHERE order_id = ? AND table_number = ?', [orderId, table_number]);
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Order not found for this table.' });
+    }
+
+    const [messages] = await db.query(
+      `SELECT message_id, message_content, response, message_status, created_at
+       FROM messages
+       WHERE order_id = ? AND table_number = ?
+       ORDER BY created_at DESC`,
+      [orderId, table_number]
+    );
+    res.json({ success: true, data: messages });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+};
 const respondToMessage = async (req, res) => {
   const { id } = req.params;
   const { response } = req.body;
@@ -79,4 +107,4 @@ const markMessageRead = async (req, res) => {
   }
 };
 
-module.exports = { sendMessage, getAllMessages, respondToMessage, markMessageRead };
+module.exports = { sendMessage, getAllMessages, getOrderMessages, respondToMessage, markMessageRead };

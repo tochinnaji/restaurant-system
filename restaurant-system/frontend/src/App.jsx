@@ -460,6 +460,7 @@ function CustomerPage() {
   const [cart, setCart] = useState([]);
   const [activeOrderId, setActiveOrderId] = useState(searchParams.get('order_id'));
   const [activeOrder, setActiveOrder] = useState(null);
+  const [orderMessages, setOrderMessages] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -486,17 +487,26 @@ function CustomerPage() {
   }, []);
 
   useEffect(() => {
-    if (!activeOrderId) return;
+    if (!activeOrderId) {
+      setOrderMessages([]);
+      return;
+    }
     const load = async () => {
-      const res = await api.get(`/orders/${activeOrderId}`);
-      if (res.success) {
-        setActiveOrder(res.data);
+      const [orderRes, messageRes] = await Promise.all([
+        api.get(`/orders/${activeOrderId}`),
+        api.get(`/messages/order/${activeOrderId}?table_number=${encodeURIComponent(tableNumber)}`)
+      ]);
+      if (orderRes.success) {
+        setActiveOrder(orderRes.data);
+      }
+      if (messageRes.success) {
+        setOrderMessages(messageRes.data || []);
       }
     };
     load();
     const timer = window.setInterval(load, 15000);
     return () => window.clearInterval(timer);
-  }, [activeOrderId]);
+  }, [activeOrderId, tableNumber]);
 
   const currentItems = useMemo(() => menu.find((cat) => cat.category_id === activeCategory)?.items || [], [menu, activeCategory]);
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -762,6 +772,19 @@ function CustomerPage() {
               <div key={`${item.menu_item_id}-${item.quantity}`} className="summary-row">
                 <span>{item.item_name} x{item.quantity}</span>
                 <strong>{formatNaira(item.subtotal)}</strong>
+              </div>
+            ))}
+            <div className="divider" />
+            <strong>Kitchen messages</strong>
+            {orderMessages.length === 0 ? <div className="empty">No messages for this order yet.</div> : null}
+            {orderMessages.map((message) => (
+              <div key={message.message_id} className="message-thread">
+                <div className="message-copy">You: {message.message_content}</div>
+                {message.response ? (
+                  <div className="response-copy">Kitchen: {message.response}</div>
+                ) : (
+                  <div className="message-copy">Waiting for response.</div>
+                )}
               </div>
             ))}
           </div>
