@@ -12,6 +12,12 @@ const safeJsonParse = (data) => {
 
 const initializePayment = async (req, res) => {
   const { order_id, email } = req.body;
+  const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
+
+  if (!paystackSecretKey || paystackSecretKey.includes('your_paystack_secret_key')) {
+    return res.status(500).json({ success: false, message: 'Paystack secret key is not configured on the server.' });
+  }
+
 
   if (!order_id || !email || !Number.isInteger(Number(order_id)) || Number(order_id) <= 0) {
     return res.status(400).json({ success: false, message: 'Order ID and email are required.' });
@@ -49,7 +55,7 @@ const initializePayment = async (req, res) => {
       path: '/transaction/initialize',
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${paystackSecretKey}`,
         'Content-Type': 'application/json'
       }
     };
@@ -82,7 +88,13 @@ const initializePayment = async (req, res) => {
           );
           res.json({ success: true, data: response.data });
         } else {
-          res.status(400).json({ success: false, message: 'Paystack initialization failed.', error: response.message });
+          const gatewayMessage = response.message || response.error || 'Payment provider rejected this transaction.';
+          console.error('Paystack initialization failed:', {
+            statusCode: paystackRes.statusCode,
+            message: gatewayMessage,
+            callback_url: `${getBackendPublicUrl(req)}/api/payment/verify`
+          });
+          res.status(400).json({ success: false, message: gatewayMessage, error: gatewayMessage });
         }
       });
     });
@@ -102,6 +114,7 @@ const initializePayment = async (req, res) => {
 
 const verifyPayment = async (req, res) => {
   const { reference } = req.query;
+  const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
 
   if (!reference) {
     return res.status(400).json({ success: false, message: 'Payment reference is required.' });
@@ -113,7 +126,7 @@ const verifyPayment = async (req, res) => {
     path: `/transaction/verify/${reference}`,
     method: 'GET',
     headers: {
-      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+      Authorization: `Bearer ${paystackSecretKey}`
     }
   };
 

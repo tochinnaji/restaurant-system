@@ -595,7 +595,7 @@ function CustomerPage() {
       window.location.href = res.data.authorization_url;
       return;
     }
-    pushToast('danger', res.message || 'Payment could not be started.');
+    pushToast('danger', res.message || res.error || 'Payment could not be started.');
   }
 
   const activeOrderStatus = activeOrder?.order_status || 'pending';
