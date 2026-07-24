@@ -1348,3 +1348,51 @@ body {
     border-radius: 14px 14px 0 0;
   }
 }
+
+/* Equal category sizing: active tabs must not grow or shrink the strip. */
+.customer-page .category-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  overflow: visible;
+  padding-bottom: 0;
+}
+
+.customer-page .category-strip .category-btn,
+.customer-page .category-strip .category-btn.active,
+.customer-page .category-strip .category-btn:hover,
+.customer-page .category-strip .category-btn:focus-visible {
+  inline-size: 100%;
+  min-inline-size: 0;
+  block-size: 64px;
+  flex: initial;
+  justify-content: center;
+  padding: 0 16px;
+  white-space: normal;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .customer-page .category-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(148px, 1fr);
+    grid-template-columns: none;
+    gap: 10px;
+    margin-inline: -12px;
+    overflow-x: auto;
+    padding: 0 12px 6px;
+    scroll-snap-type: x proximity;
+  }
+
+  .customer-page .category-strip .category-btn,
+  .customer-page .category-strip .category-btn.active,
+  .customer-page .category-strip .category-btn:hover,
+  .customer-page .category-strip .category-btn:focus-visible {
+    inline-size: 100%;
+    min-inline-size: 0;
+    block-size: 58px;
+    flex: initial;
+    scroll-snap-align: start;
+  }
+}
