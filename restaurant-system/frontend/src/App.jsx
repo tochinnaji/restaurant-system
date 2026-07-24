@@ -97,21 +97,29 @@ function readOrderHistory() {
   }
 }
 
+function writeTableOrderHistory(tableNumber, tableHistory) {
+  if (typeof window === 'undefined' || !tableNumber) return [];
+  const history = readOrderHistory();
+  const nextTableHistory = (Array.isArray(tableHistory) ? tableHistory : []).slice(0, 8);
+  window.localStorage.setItem(ORDER_HISTORY_KEY, JSON.stringify({ ...history, [tableNumber]: nextTableHistory }));
+  return nextTableHistory;
+}
+
 function saveOrderHistoryEntry(tableNumber, order) {
   if (typeof window === 'undefined' || !tableNumber || !order?.order_id) return [];
   const history = readOrderHistory();
+  const existing = (history[tableNumber] || []).find((item) => String(item.order_id) === String(order.order_id));
   const entry = {
+    ...existing,
     order_id: String(order.order_id),
     total_amount: order.total_amount,
-    order_status: order.order_status || 'pending',
-    payment_status: order.payment_status || 'unpaid',
-    created_at: order.created_at || new Date().toISOString(),
-    savedAt: Date.now()
+    order_status: order.order_status || existing?.order_status || 'pending',
+    payment_status: order.payment_status || existing?.payment_status || 'unpaid',
+    created_at: order.created_at || existing?.created_at || new Date().toISOString(),
+    savedAt: existing?.savedAt || Date.now()
   };
-  const tableHistory = [entry, ...(history[tableNumber] || []).filter((item) => String(item.order_id) !== String(order.order_id))].slice(0, 8);
-  const nextHistory = { ...history, [tableNumber]: tableHistory };
-  window.localStorage.setItem(ORDER_HISTORY_KEY, JSON.stringify(nextHistory));
-  return tableHistory;
+  const tableHistory = [entry, ...(history[tableNumber] || []).filter((item) => String(item.order_id) !== String(order.order_id))];
+  return writeTableOrderHistory(tableNumber, tableHistory);
 }
 
 function appPath(path) {
@@ -564,6 +572,7 @@ function CustomerPage() {
       if (orderRes.success) {
         setActiveOrder(orderRes.data);
         saveOrderContext(activeOrderId, tableNumber, qrToken);
+        setOrderHistory(saveOrderHistoryEntry(tableNumber, orderRes.data));
       }
       if (messageRes.success) {
         setOrderMessages(messageRes.data || []);
@@ -574,11 +583,32 @@ function CustomerPage() {
     return () => window.clearInterval(timer);
   }, [activeOrderId, tableNumber, qrToken]);
 
+  useEffect(() => {
+    refreshTableOrderHistory().catch(() => {});
+  }, [tableNumber]);
+
   const currentItems = useMemo(() => menu.find((cat) => cat.category_id === activeCategory)?.items || [], [menu, activeCategory]);
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const tableHint = qrToken ? `Table ${tableNumber}` : `Table ${tableNumber} - scan a valid QR link`;
+
+  async function refreshTableOrderHistory() {
+    const currentHistory = readOrderHistory()[tableNumber] || [];
+    if (currentHistory.length === 0) {
+      setOrderHistory([]);
+      return [];
+    }
+
+    const responses = await Promise.all(currentHistory.map((order) => api.get(`/orders/${order.order_id}`)));
+    const nextHistory = currentHistory.map((order, index) => {
+      const latest = responses[index];
+      return latest?.success ? { ...order, ...latest.data, order_id: String(latest.data.order_id), savedAt: order.savedAt } : order;
+    });
+    const savedHistory = writeTableOrderHistory(tableNumber, nextHistory);
+    setOrderHistory(savedHistory);
+    return savedHistory;
+  }
 
   async function refreshCustomerData() {
     setRefreshingCustomer(true);
@@ -595,6 +625,10 @@ function CustomerPage() {
       }
       if (orderRes?.success) {
         setActiveOrder(orderRes.data);
+        saveOrderContext(activeOrderId, tableNumber, qrToken);
+        setOrderHistory(saveOrderHistoryEntry(tableNumber, orderRes.data));
+      } else {
+        await refreshTableOrderHistory();
       }
       if (messageRes?.success) {
         setOrderMessages(messageRes.data || []);
@@ -987,7 +1021,7 @@ function CustomerPage() {
             {orderHistory.map((order) => (
               <button key={order.order_id} type="button" className="history-row" onClick={() => { setActiveOrderId(String(order.order_id)); setShowTracking(true); }}>
                 <span>Order #{order.order_id}</span>
-                <span className={badgeClass(order.order_status)}>{order.order_status}</span>
+                <span className={badgeClass(order.order_status)}>{order.order_status || 'pending'}</span>
                 <strong>{formatNaira(order.total_amount)}</strong>
               </button>
             ))}
