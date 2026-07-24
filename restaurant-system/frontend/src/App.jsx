@@ -51,7 +51,15 @@ const ORDER_HISTORY_TTL_MS = 24 * 60 * 60 * 1000;
 function readStoredQrContext() {
   if (typeof window === 'undefined') return null;
   try {
-    return JSON.parse(window.localStorage.getItem(QR_CONTEXT_KEY) || 'null');
+    const stored = JSON.parse(window.localStorage.getItem(QR_CONTEXT_KEY) || 'null');
+    if (stored?.orderId && stored?.orderSavedAt && Date.now() - Number(stored.orderSavedAt) >= ORDER_HISTORY_TTL_MS) {
+      const next = { ...stored };
+      delete next.orderId;
+      delete next.orderSavedAt;
+      window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify(next));
+      return next;
+    }
+    return stored;
   } catch (err) {
     return null;
   }
@@ -892,8 +900,8 @@ function CustomerPage() {
             <strong>Total</strong>
             <strong>{formatNaira(total)}</strong>
           </div>
-          <Button icon={Send} onClick={placeOrder} disabled={loadingOrder || cart.length === 0}>
-            {loadingOrder ? 'Placing order...' : 'Place order'}
+          <Button icon={Send} onClick={submitCart} disabled={loadingOrder || cart.length === 0}>
+            {loadingOrder ? 'Saving order...' : canAddToCurrentOrder ? 'Add to current order' : 'Place order'}
           </Button>
         </div>
       </Modal>
@@ -939,6 +947,20 @@ function CustomerPage() {
               <span>Total</span>
               <strong>{formatNaira(activeOrder.total_amount)}</strong>
             </div>
+            {['unpaid', 'pending'].includes(activeOrder.payment_status) && activeOrder.order_status !== 'cancelled' ? (
+              <div className="page-actions">
+                <button type="button" className="btn btn-primary" onClick={() => { setShowTracking(false); setShowPayment(true); }}>
+                  <Wallet size={16} />
+                  <span>Pay for order</span>
+                </button>
+                {canAddToCurrentOrder ? (
+                  <button type="button" className="btn btn-secondary" onClick={() => { setShowTracking(false); setShowCart(true); }}>
+                    <Plus size={16} />
+                    <span>Add more items</span>
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             <div className="divider" />
             {(activeOrder.items || []).map((item) => (
               <div key={`${item.menu_item_id}-${item.quantity}`} className="summary-row">
@@ -958,6 +980,16 @@ function CustomerPage() {
                   <div className="message-copy">Waiting for response.</div>
                 )}
               </div>
+            ))}
+            <div className="divider" />
+            <strong>Today at this table</strong>
+            {orderHistory.length === 0 ? <div className="empty">No recent orders for this table.</div> : null}
+            {orderHistory.map((order) => (
+              <button key={order.order_id} type="button" className="history-row" onClick={() => { setActiveOrderId(String(order.order_id)); setShowTracking(true); }}>
+                <span>Order #{order.order_id}</span>
+                <span className={badgeClass(order.order_status)}>{order.order_status}</span>
+                <strong>{formatNaira(order.total_amount)}</strong>
+              </button>
             ))}
           </div>
         ) : (
