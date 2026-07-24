@@ -1,18 +1,13 @@
 const db = require('../config/db');
 
 /**
- * Estimates wait time for a new order.
- * Formula: Estimated Wait Time = Number of Pending Orders x Average Meal Preparation Time.
+ * Estimates wait time for a new order from the ordered items themselves.
+ * Customer-facing time should reflect the food prep duration, not multiply by
+ * every pending kitchen order, otherwise a 5-minute snack can appear as 40 mins.
  */
 const estimateWaitTime = async (orderItems) => {
   try {
-    const [pendingOrders] = await db.query(
-      `SELECT COUNT(*) AS count FROM orders WHERE order_status IN ('pending', 'preparing')`
-    );
-    const pendingCount = pendingOrders[0].count;
-
     let totalPrepTime = 0;
-    let itemCount = 0;
 
     for (const item of orderItems) {
       const [rows] = await db.query(
@@ -23,13 +18,11 @@ const estimateWaitTime = async (orderItems) => {
         [item.menu_item_id]
       );
       if (rows.length > 0) {
-        totalPrepTime += rows[0].average_preparation_time;
-        itemCount++;
+        totalPrepTime += Number(rows[0].average_preparation_time) * Number(item.quantity || 1);
       }
     }
 
-    const avgPrepTime = itemCount > 0 ? totalPrepTime / itemCount : 10;
-    return Math.ceil((pendingCount + 1) * avgPrepTime);
+    return Math.max(Math.ceil(totalPrepTime), 1);
   } catch (err) {
     console.error('Wait time estimation error:', err);
     return 15;
