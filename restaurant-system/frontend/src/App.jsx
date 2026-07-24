@@ -662,6 +662,14 @@ function CustomerPage() {
     );
   }
 
+  function returnToMenuForAddOns() {
+    setShowTracking(false);
+    setShowCart(false);
+    window.setTimeout(() => {
+      menuSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+
   async function submitCart() {
     if (canAddToCurrentOrder) {
       await addItemsToCurrentOrder();
@@ -870,7 +878,7 @@ function CustomerPage() {
         </section>
       ) : null}
 
-      <section className="category-strip">
+      <section ref={menuSectionRef} className="category-strip">
         {menu.map((category) => (
           <button
             key={category.category_id}
@@ -988,7 +996,7 @@ function CustomerPage() {
                   <span>Pay for order</span>
                 </button>
                 {canAddToCurrentOrder ? (
-                  <button type="button" className="btn btn-secondary" onClick={() => { setShowTracking(false); setShowCart(true); }}>
+                  <button type="button" className="btn btn-secondary" onClick={returnToMenuForAddOns}>
                     <Plus size={16} />
                     <span>Add more items</span>
                   </button>

@@ -10,6 +10,54 @@ const safeJsonParse = (data) => {
   }
 };
 
+const requestPaystackRefund = (paymentReference, amount) => new Promise((resolve, reject) => {
+  const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
+  if (!paystackSecretKey || paystackSecretKey.includes('your_paystack_secret_key')) {
+    const error = new Error('Paystack secret key is not configured on the server.');
+    error.statusCode = 500;
+    reject(error);
+    return;
+  }
+
+  const params = JSON.stringify({
+    transaction: paymentReference,
+    amount: Math.round(Number(amount) * 100)
+  });
+
+  const options = {
+    hostname: 'api.paystack.co',
+    port: 443,
+    path: '/refund',
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${paystackSecretKey}`,
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(params)
+    }
+  };
+
+  const refundReq = https.request(options, (refundRes) => {
+    let data = '';
+    refundRes.on('data', (chunk) => { data += chunk; });
+    refundRes.on('end', () => {
+      const response = safeJsonParse(data);
+      if (refundRes.statusCode >= 200 && refundRes.statusCode < 300 && response?.status) {
+        resolve(response);
+        return;
+      }
+
+      const error = new Error(response?.message || 'Payment reversal failed at payment provider.');
+      error.statusCode = refundRes.statusCode || 502;
+      error.gatewayResponse = response;
+      reject(error);
+    });
+  });
+
+  refundReq.on('error', reject);
+  refundReq.write(params);
+  refundReq.end();
+});
+
 const initializePayment = async (req, res) => {
   const { order_id, email } = req.body;
   const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
@@ -210,6 +258,16 @@ const reversePayment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Payment record not found.' });
     }
 
+    const payment = payments[0];
+    if (payment.payment_status !== 'successful') {
+      return res.status(409).json({ success: false, message: 'Only successful payments can be reversed.' });
+    }
+    if (!payment.payment_reference) {
+      return res.status(409).json({ success: false, message: 'Payment reference is missing, so provider reversal cannot be requested.' });
+    }
+
+    const refundResponse = await requestPaystackRefund(payment.payment_reference, payment.amount);
+
     await db.query(
       `UPDATE payments
        SET payment_status = 'failed', payment_method = NULL, paid_at = NULL
@@ -219,10 +277,14 @@ const reversePayment = async (req, res) => {
 
     await db.query('UPDATE orders SET payment_status = "unpaid" WHERE order_id = ?', [order_id]);
 
-    res.json({ success: true, message: 'Payment reversed.' });
+    res.json({
+      success: true,
+      message: 'Payment reversed and refund requested through Paystack.',
+      data: refundResponse.data || null
+    });
   } catch (err) {
     console.error('Reverse payment error:', err);
-    res.status(500).json({ success: false, message: 'Server error.' });
+    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Server error.' });
   }
 };
 module.exports = { initializePayment, verifyPayment, reversePayment };
