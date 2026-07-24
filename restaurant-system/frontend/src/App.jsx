@@ -45,6 +45,8 @@ const BRAND_ICON = `${import.meta.env.BASE_URL}brand/irms-sidebar-icon.png`;
 const BRAND_LOGO = `${import.meta.env.BASE_URL}brand/irms-selected-logo-source.png`;
 const APP_BASE_PATH = (import.meta.env.VITE_APP_BASE_PATH || '/frontend').replace(/\/+$/, '') || '/';
 const QR_CONTEXT_KEY = 'irms_qr_context';
+const ORDER_HISTORY_KEY = 'irms_order_history';
+const ORDER_HISTORY_TTL_MS = 24 * 60 * 60 * 1000;
 
 function readStoredQrContext() {
   if (typeof window === 'undefined') return null;
@@ -67,9 +69,41 @@ function saveOrderContext(orderId, tableNumber, token) {
   window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify({
     ...current,
     orderId: String(orderId),
+    orderSavedAt: Date.now(),
     tableNumber: tableNumber || current.tableNumber,
     token: token || current.token
   }));
+}
+
+function readOrderHistory() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const now = Date.now();
+    const stored = JSON.parse(window.localStorage.getItem(ORDER_HISTORY_KEY) || '{}');
+    return Object.fromEntries(Object.entries(stored).map(([table, orders]) => [
+      table,
+      (Array.isArray(orders) ? orders : []).filter((order) => now - Number(order.savedAt || 0) < ORDER_HISTORY_TTL_MS)
+    ]));
+  } catch (err) {
+    return {};
+  }
+}
+
+function saveOrderHistoryEntry(tableNumber, order) {
+  if (typeof window === 'undefined' || !tableNumber || !order?.order_id) return [];
+  const history = readOrderHistory();
+  const entry = {
+    order_id: String(order.order_id),
+    total_amount: order.total_amount,
+    order_status: order.order_status || 'pending',
+    payment_status: order.payment_status || 'unpaid',
+    created_at: order.created_at || new Date().toISOString(),
+    savedAt: Date.now()
+  };
+  const tableHistory = [entry, ...(history[tableNumber] || []).filter((item) => String(item.order_id) !== String(order.order_id))].slice(0, 8);
+  const nextHistory = { ...history, [tableNumber]: tableHistory };
+  window.localStorage.setItem(ORDER_HISTORY_KEY, JSON.stringify(nextHistory));
+  return tableHistory;
 }
 
 function appPath(path) {
@@ -481,6 +515,7 @@ function CustomerPage() {
   const [paymentEmail, setPaymentEmail] = useState('');
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [refreshingCustomer, setRefreshingCustomer] = useState(false);
+  const [orderHistory, setOrderHistory] = useState(() => readOrderHistory()[tableNumber] || []);
   const [now, setNow] = useState(Date.now());
   const lastOrderStatusRef = useRef(null);
   const lastPaymentStatusRef = useRef(null);
@@ -585,6 +620,44 @@ function CustomerPage() {
     );
   }
 
+  async function submitCart() {
+    if (canAddToCurrentOrder) {
+      await addItemsToCurrentOrder();
+      return;
+    }
+    await placeOrder();
+  }
+
+  async function addItemsToCurrentOrder() {
+    if (!qrToken) {
+      pushToast('danger', 'Scan a valid table QR code before adding items.');
+      return;
+    }
+    if (cart.length === 0) {
+      pushToast('danger', 'Add at least one menu item first.');
+      return;
+    }
+    setLoadingOrder(true);
+    try {
+      const res = await api.post(`/orders/${activeOrderId}/items`, {
+        table_number: tableNumber,
+        token: qrToken,
+        items: cart.map((item) => ({ menu_item_id: item.menu_item_id, quantity: item.quantity }))
+      });
+      if (!res.success) {
+        pushToast('danger', res.message || 'Could not add items to this order.');
+        return;
+      }
+      setActiveOrder(res.data);
+      setOrderHistory(saveOrderHistoryEntry(tableNumber, res.data));
+      setCart([]);
+      setShowCart(false);
+      pushToast('success', 'Items added to your current order.');
+    } finally {
+      setLoadingOrder(false);
+    }
+  }
+
   async function placeOrder() {
     if (!qrToken) {
       pushToast('danger', 'Scan a valid table QR code before placing an order.');
@@ -607,7 +680,9 @@ function CustomerPage() {
       }
       setActiveOrderId(String(res.data.order_id));
       saveOrderContext(res.data.order_id, tableNumber, qrToken);
-      setActiveOrder({ ...res.data, order_status: 'pending', payment_status: 'unpaid', items: cart, created_at: new Date().toISOString() });
+      const placedOrder = { ...res.data, order_status: 'pending', payment_status: 'unpaid', items: cart, created_at: new Date().toISOString() };
+      setActiveOrder(placedOrder);
+      setOrderHistory(saveOrderHistoryEntry(tableNumber, placedOrder));
       setCart([]);
       setShowCart(false);
       setShowPayment(true);
@@ -682,6 +757,7 @@ function CustomerPage() {
     cancelled: 'Order cancelled'
   };
   const progressText = statusTrackingText[activeOrderStatus] || timeLeftText;
+  const canAddToCurrentOrder = activeOrderId && ['pending'].includes(activeOrderStatus) && ['unpaid', 'pending'].includes(activeOrder?.payment_status || 'unpaid');
 
   useEffect(() => {
     if (!activeOrder) return;
@@ -866,7 +942,7 @@ function CustomerPage() {
             <div className="divider" />
             {(activeOrder.items || []).map((item) => (
               <div key={`${item.menu_item_id}-${item.quantity}`} className="summary-row">
-                <span>{item.item_name} x{item.quantity}</span>
+                <span>{(item.item_name || item.name)} x{item.quantity}</span>
                 <strong>{formatNaira(item.subtotal)}</strong>
               </div>
             ))}

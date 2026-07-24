@@ -3,6 +3,37 @@ const { estimateWaitTime } = require('../utils/waitTime');
 
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
 
+const normalizeOrderItems = (items) => {
+  if (!Array.isArray(items)) return [];
+  return items.map(item => ({
+    menu_item_id: Number(item.menu_item_id),
+    quantity: Number(item.quantity)
+  }));
+};
+
+const validateAndPriceItems = async (conn, normalizedItems) => {
+  let totalAmount = 0;
+  const enrichedItems = [];
+
+  for (const item of normalizedItems) {
+    const [rows] = await conn.query(
+      'SELECT * FROM menu_items WHERE menu_item_id = ? AND availability_status = "available"',
+      [item.menu_item_id]
+    );
+    if (rows.length === 0) {
+      const error = new Error(`Item ID ${item.menu_item_id} is out of stock or does not exist.`);
+      error.statusCode = 400;
+      throw error;
+    }
+    const menuItem = rows[0];
+    const subtotal = Number(menuItem.price) * item.quantity;
+    totalAmount += subtotal;
+    enrichedItems.push({ ...item, price: menuItem.price, subtotal });
+  }
+
+  return { totalAmount, enrichedItems };
+};
+
 const placeOrder = async (req, res) => {
   const { table_number, token, items } = req.body;
   // items = [{ menu_item_id, quantity }]
@@ -89,6 +120,100 @@ const placeOrder = async (req, res) => {
     await conn.rollback();
     console.error('Place order error:', err);
     res.status(500).json({ success: false, message: 'Server error.' });
+  } finally {
+    conn.release();
+  }
+};
+
+
+const addItemsToOrder = async (req, res) => {
+  const { id } = req.params;
+  const { table_number, token, items } = req.body;
+
+  if (!isPositiveInteger(id) || !table_number || !token || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'Valid order, table QR code, and items are required.' });
+  }
+
+  const normalizedItems = normalizeOrderItems(items);
+  if (normalizedItems.some(item => !isPositiveInteger(item.menu_item_id) || !isPositiveInteger(item.quantity))) {
+    return res.status(400).json({ success: false, message: 'Each order item must have a valid item ID and quantity.' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [tables] = await conn.query(
+      'SELECT table_id FROM restaurant_tables WHERE table_number = ? AND qr_token = ? AND is_active = TRUE',
+      [table_number, token]
+    );
+    if (tables.length === 0) {
+      await conn.rollback();
+      return res.status(403).json({ success: false, message: 'Invalid or inactive table QR code.' });
+    }
+
+    const [orders] = await conn.query('SELECT * FROM orders WHERE order_id = ? FOR UPDATE', [id]);
+    if (orders.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    const order = orders[0];
+    if (order.table_number !== table_number) {
+      await conn.rollback();
+      return res.status(403).json({ success: false, message: 'This order belongs to another table.' });
+    }
+    if (!['pending'].includes(order.order_status) || !['unpaid', 'pending'].includes(order.payment_status)) {
+      await conn.rollback();
+      return res.status(409).json({ success: false, message: 'Items can only be added before the kitchen starts or payment is completed.' });
+    }
+
+    const { totalAmount, enrichedItems } = await validateAndPriceItems(conn, normalizedItems);
+
+    for (const item of enrichedItems) {
+      const [existing] = await conn.query(
+        'SELECT order_item_id, quantity FROM order_items WHERE order_id = ? AND menu_item_id = ?',
+        [id, item.menu_item_id]
+      );
+      if (existing.length > 0) {
+        const nextQuantity = Number(existing[0].quantity) + item.quantity;
+        await conn.query(
+          'UPDATE order_items SET quantity = ?, subtotal = price * ? WHERE order_item_id = ?',
+          [nextQuantity, nextQuantity, existing[0].order_item_id]
+        );
+      } else {
+        await conn.query(
+          'INSERT INTO order_items (order_id, menu_item_id, quantity, price, subtotal) VALUES (?, ?, ?, ?, ?)',
+          [id, item.menu_item_id, item.quantity, item.price, item.subtotal]
+        );
+      }
+    }
+
+    const addedWaitTime = await estimateWaitTime(normalizedItems);
+    await conn.query(
+      'UPDATE orders SET total_amount = total_amount + ?, estimated_wait_time = COALESCE(estimated_wait_time, 0) + ? WHERE order_id = ?',
+      [totalAmount, addedWaitTime, id]
+    );
+
+    const [updatedOrders] = await conn.query('SELECT * FROM orders WHERE order_id = ?', [id]);
+    const [updatedItems] = await conn.query(
+      `SELECT oi.*, m.item_name FROM order_items oi
+       JOIN menu_items m ON oi.menu_item_id = m.menu_item_id
+       WHERE oi.order_id = ?`,
+      [id]
+    );
+
+    await conn.commit();
+
+    res.json({
+      success: true,
+      message: 'Items added to order.',
+      data: { ...updatedOrders[0], items: updatedItems }
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Add items to order error:', err);
+    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Server error.' });
   } finally {
     conn.release();
   }
@@ -207,4 +332,4 @@ const getDashboardSummary = async (req, res) => {
   }
 };
 
-module.exports = { placeOrder, getOrderById, getAllOrders, updateOrderStatus, getDashboardSummary };
+module.exports = { placeOrder, addItemsToOrder, getOrderById, getAllOrders, updateOrderStatus, getDashboardSummary };

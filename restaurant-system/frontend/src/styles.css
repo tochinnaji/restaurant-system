@@ -1396,3 +1396,31 @@ body {
     scroll-snap-align: start;
   }
 }
+
+.history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-row:hover,
+.history-row:focus-visible {
+  border-color: rgba(245, 124, 0, 0.55);
+  box-shadow: 0 8px 18px rgba(214, 90, 0, 0.12);
+  outline: none;
+}
+
+@media (max-width: 520px) {
+  .history-row {
+    grid-template-columns: 1fr;
+  }
+}
