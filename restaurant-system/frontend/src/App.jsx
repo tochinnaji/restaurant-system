@@ -669,16 +669,19 @@ function CustomerPage() {
   const activeOrderStatus = activeOrder?.order_status || 'pending';
   const elapsedMinutes = activeOrder?.created_at ? Math.floor((now - new Date(activeOrder.created_at).getTime()) / 60000) : 0;
   const remainingMinutes = activeOrder?.estimated_wait_time != null ? Math.max(Number(activeOrder.estimated_wait_time) - elapsedMinutes, 0) : null;
-  const trackingText = activeOrderStatus === 'cancelled'
-    ? 'Order cancelled'
-    : remainingMinutes == null
-      ? 'Pending wait estimate'
-      : remainingMinutes === 0
-        ? 'Order is ready'
-        : `${remainingMinutes} min left`;
-  const progressText = activeOrder?.payment_status === 'paid' && activeOrderStatus !== 'ready' && activeOrderStatus !== 'cancelled'
-    ? `Order in progress - ${trackingText}`
-    : trackingText;
+  const timeLeftText = remainingMinutes == null
+    ? 'Pending wait estimate'
+    : remainingMinutes === 0
+      ? 'Order is ready'
+      : `${remainingMinutes} min left`;
+  const statusTrackingText = {
+    pending: timeLeftText,
+    preparing: `Order in progress - ${timeLeftText}`,
+    ready: 'Order is ready',
+    delivered: 'Order delivered',
+    cancelled: 'Order cancelled'
+  };
+  const progressText = statusTrackingText[activeOrderStatus] || timeLeftText;
 
   useEffect(() => {
     if (!activeOrder) return;
@@ -689,10 +692,12 @@ function CustomerPage() {
       pushToast('success', 'Payment confirmed. Order in progress.');
     }
     if (lastOrderStatusRef.current && lastOrderStatusRef.current !== status) {
-      if (status === 'cancelled') pushToast('danger', 'Order cancelled.');
+      if (status === 'preparing') pushToast('success', 'Order in progress.');
       if (status === 'ready') pushToast('success', 'Order is ready.');
+      if (status === 'delivered') pushToast('success', 'Order delivered.');
+      if (status === 'cancelled') pushToast('danger', 'Order cancelled.');
     }
-    if (remainingMinutes === 0 && status !== 'cancelled' && !readyNoticeShownRef.current) {
+    if (remainingMinutes === 0 && !['cancelled', 'ready', 'delivered'].includes(status) && !readyNoticeShownRef.current) {
       readyNoticeShownRef.current = true;
       pushToast('success', 'Order is ready.');
     }
