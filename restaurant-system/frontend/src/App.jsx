@@ -57,7 +57,19 @@ function readStoredQrContext() {
 
 function saveQrContext(tableNumber, token) {
   if (typeof window === 'undefined' || !tableNumber || !token) return;
-  window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify({ tableNumber, token }));
+  const current = readStoredQrContext() || {};
+  window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify({ ...current, tableNumber, token }));
+}
+
+function saveOrderContext(orderId, tableNumber, token) {
+  if (typeof window === 'undefined' || !orderId) return;
+  const current = readStoredQrContext() || {};
+  window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify({
+    ...current,
+    orderId: String(orderId),
+    tableNumber: tableNumber || current.tableNumber,
+    token: token || current.token
+  }));
 }
 
 function appPath(path) {
@@ -458,7 +470,7 @@ function CustomerPage() {
   const [menu, setMenu] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [cart, setCart] = useState([]);
-  const [activeOrderId, setActiveOrderId] = useState(searchParams.get('order_id'));
+  const [activeOrderId, setActiveOrderId] = useState(searchParams.get('order_id') || storedQrContext?.orderId || '');
   const [activeOrder, setActiveOrder] = useState(null);
   const [orderMessages, setOrderMessages] = useState([]);
   const [showCart, setShowCart] = useState(false);
@@ -468,12 +480,22 @@ function CustomerPage() {
   const [messageText, setMessageText] = useState('');
   const [paymentEmail, setPaymentEmail] = useState('');
   const [loadingOrder, setLoadingOrder] = useState(false);
+  const [refreshingCustomer, setRefreshingCustomer] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const lastOrderStatusRef = useRef(null);
+  const lastPaymentStatusRef = useRef(null);
+  const readyNoticeShownRef = useRef(false);
 
   useEffect(() => {
     if (urlQrToken) {
       saveQrContext(tableNumber, urlQrToken);
     }
   }, [tableNumber, urlQrToken]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     api.get('/menu').then((res) => {
@@ -498,6 +520,7 @@ function CustomerPage() {
       ]);
       if (orderRes.success) {
         setActiveOrder(orderRes.data);
+        saveOrderContext(activeOrderId, tableNumber, qrToken);
       }
       if (messageRes.success) {
         setOrderMessages(messageRes.data || []);
@@ -506,13 +529,38 @@ function CustomerPage() {
     load();
     const timer = window.setInterval(load, 15000);
     return () => window.clearInterval(timer);
-  }, [activeOrderId, tableNumber]);
+  }, [activeOrderId, tableNumber, qrToken]);
 
   const currentItems = useMemo(() => menu.find((cat) => cat.category_id === activeCategory)?.items || [], [menu, activeCategory]);
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const tableHint = qrToken ? `Table ${tableNumber}` : `Table ${tableNumber} - scan a valid QR link`;
+
+  async function refreshCustomerData() {
+    setRefreshingCustomer(true);
+    try {
+      const requests = [api.get('/menu')];
+      if (activeOrderId) {
+        requests.push(api.get(`/orders/${activeOrderId}`));
+        requests.push(api.get(`/messages/order/${activeOrderId}?table_number=${encodeURIComponent(tableNumber)}`));
+      }
+      const [menuRes, orderRes, messageRes] = await Promise.all(requests);
+      if (menuRes.success) {
+        setMenu(menuRes.data || []);
+        setActiveCategory((current) => current || (menuRes.data || [])[0]?.category_id || null);
+      }
+      if (orderRes?.success) {
+        setActiveOrder(orderRes.data);
+      }
+      if (messageRes?.success) {
+        setOrderMessages(messageRes.data || []);
+      }
+      pushToast('success', activeOrderId ? 'Order status refreshed.' : 'Menu refreshed.');
+    } finally {
+      setRefreshingCustomer(false);
+    }
+  }
 
   function addItem(item) {
     setCart((current) => {
@@ -558,11 +606,13 @@ function CustomerPage() {
         return;
       }
       setActiveOrderId(String(res.data.order_id));
-      setActiveOrder({ ...res.data, order_status: 'pending', payment_status: 'unpaid', items: cart });
+      saveOrderContext(res.data.order_id, tableNumber, qrToken);
+      setActiveOrder({ ...res.data, order_status: 'pending', payment_status: 'unpaid', items: cart, created_at: new Date().toISOString() });
       setCart([]);
       setShowCart(false);
       setShowPayment(true);
-      pushToast('success', `Order #${res.data.order_id} placed. Estimated wait ${res.data.estimated_wait_time} min.`);
+      pushToast('success', `Order #${res.data.order_id} has been placed.`);
+      pushToast('success', `Estimated wait: ${res.data.estimated_wait_time} min.`);
     } finally {
       setLoadingOrder(false);
     }
@@ -584,6 +634,14 @@ function CustomerPage() {
     });
     if (res.success) {
       pushToast('success', 'Message sent.');
+      setOrderMessages((current) => [
+        ...current,
+        {
+          message_id: `local-${Date.now()}`,
+          message_content: messageText,
+          response: ''
+        }
+      ]);
       setMessageText('');
       setShowMessage(false);
     } else {
@@ -609,6 +667,39 @@ function CustomerPage() {
   }
 
   const activeOrderStatus = activeOrder?.order_status || 'pending';
+  const elapsedMinutes = activeOrder?.created_at ? Math.floor((now - new Date(activeOrder.created_at).getTime()) / 60000) : 0;
+  const remainingMinutes = activeOrder?.estimated_wait_time != null ? Math.max(Number(activeOrder.estimated_wait_time) - elapsedMinutes, 0) : null;
+  const trackingText = activeOrderStatus === 'cancelled'
+    ? 'Order cancelled'
+    : remainingMinutes == null
+      ? 'Pending wait estimate'
+      : remainingMinutes === 0
+        ? 'Order is ready'
+        : `${remainingMinutes} min left`;
+  const progressText = activeOrder?.payment_status === 'paid' && activeOrderStatus !== 'ready' && activeOrderStatus !== 'cancelled'
+    ? `Order in progress - ${trackingText}`
+    : trackingText;
+
+  useEffect(() => {
+    if (!activeOrder) return;
+    const status = activeOrder.order_status;
+    const payment = activeOrder.payment_status;
+
+    if (lastPaymentStatusRef.current && lastPaymentStatusRef.current !== payment && payment === 'paid') {
+      pushToast('success', 'Payment confirmed. Order in progress.');
+    }
+    if (lastOrderStatusRef.current && lastOrderStatusRef.current !== status) {
+      if (status === 'cancelled') pushToast('danger', 'Order cancelled.');
+      if (status === 'ready') pushToast('success', 'Order is ready.');
+    }
+    if (remainingMinutes === 0 && status !== 'cancelled' && !readyNoticeShownRef.current) {
+      readyNoticeShownRef.current = true;
+      pushToast('success', 'Order is ready.');
+    }
+
+    lastOrderStatusRef.current = status;
+    lastPaymentStatusRef.current = payment;
+  }, [activeOrder, remainingMinutes, pushToast]);
 
   return (
     <div className="customer-page">
@@ -623,9 +714,9 @@ function CustomerPage() {
             <MessageSquareText size={16} />
             <span>Message kitchen</span>
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>
+          <button type="button" className="btn btn-secondary" onClick={refreshCustomerData} disabled={refreshingCustomer}>
             <RefreshCw size={16} />
-            <span>Refresh</span>
+            <span>{refreshingCustomer ? 'Refreshing...' : 'Refresh'}</span>
           </button>
           <button type="button" className="btn btn-primary" onClick={() => setShowCart(true)}>
             <ShoppingCart size={16} />
@@ -644,7 +735,7 @@ function CustomerPage() {
         <section className="notice notice-info">
           <div>
             <strong>Active order #{activeOrderId}</strong>
-            <div>Wait time: {activeOrder?.estimated_wait_time ?? 'Pending'} min</div>
+            <div>{progressText}</div>
           </div>
           <div className="notice-actions">
             <span className={badgeClass(activeOrderStatus)}>{activeOrderStatus}</span>
@@ -760,8 +851,8 @@ function CustomerPage() {
               <span className={badgeClass(activeOrder.payment_status)}>{activeOrder.payment_status}</span>
             </div>
             <div className="summary-row">
-              <span>Estimated wait</span>
-              <strong>{activeOrder.estimated_wait_time} min</strong>
+              <span>Time left</span>
+              <strong>{progressText}</strong>
             </div>
             <div className="summary-row">
               <span>Total</span>
@@ -802,19 +893,31 @@ function PaymentSuccessPage() {
   const storedQrContext = readStoredQrContext();
   const table = searchParams.get('table') || storedQrContext?.tableNumber;
   const token = searchParams.get('token') || storedQrContext?.token;
+  const trackUrl = appPath(`/customer?table=${encodeURIComponent(table || 'T1')}&token=${encodeURIComponent(token || '')}&order_id=${encodeURIComponent(orderId || '')}`);
+  const menuUrl = appPath(`/customer?table=${encodeURIComponent(table || 'T1')}&token=${encodeURIComponent(token || '')}`);
+
+  useEffect(() => {
+    if (orderId) {
+      saveOrderContext(orderId, table, token);
+    }
+  }, [orderId, table, token]);
 
   return (
     <div className="status-page success">
       <div className="status-card">
         <div className="status-icon success"><Sparkles size={24} /></div>
         <h1>Payment confirmed</h1>
-        <p>Your restaurant order has been paid successfully.</p>
+        <p>Payment confirmed. Your order is now in progress.</p>
         <div className="stack">
           <div className="summary-row"><span>Order</span><strong>#{orderId || '-'}</strong></div>
           <div className="summary-row"><span>Table</span><strong>{table || '-'}</strong></div>
         </div>
         <div className="page-actions">
-          <a className="btn btn-primary" href={appPath(`/customer?table=${encodeURIComponent(table || 'T1')}&token=${encodeURIComponent(token || '')}`)}>
+          <a className="btn btn-primary" href={trackUrl}>
+            <Eye size={16} />
+            <span>Track order</span>
+          </a>
+          <a className="btn btn-secondary" href={menuUrl}>
             <ArrowLeft size={16} />
             <span>Back to menu</span>
           </a>
