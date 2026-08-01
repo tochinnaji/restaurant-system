@@ -537,6 +537,7 @@ function CustomerPage() {
   const lastPaymentStatusRef = useRef(null);
   const readyNoticeShownRef = useRef(false);
 
+  const menuSectionRef = useRef(null);
   useEffect(() => {
     if (urlQrToken) {
       saveQrContext(tableNumber, urlQrToken);
@@ -835,7 +836,7 @@ function CustomerPage() {
   return (
     <div className="customer-page">
       <header className="customer-topbar">
-        <div>
+        <div className="customer-branding">
           <div className="eyebrow">Customer ordering</div>
           <h1>{APP_NAME}</h1>
           <p>{tableHint}</p>
@@ -845,11 +846,11 @@ function CustomerPage() {
             <MessageSquareText size={16} />
             <span>Message kitchen</span>
           </button>
-          <button type="button" className="btn btn-secondary" onClick={refreshCustomerData} disabled={refreshingCustomer}>
+          <button type="button" className="btn btn-secondary customer-refresh-btn" onClick={refreshCustomerData} disabled={refreshingCustomer}>
             <RefreshCw size={16} />
             <span>{refreshingCustomer ? 'Refreshing...' : 'Refresh'}</span>
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => setShowCart(true)}>
+          <button type="button" className="btn btn-primary customer-cart-btn" onClick={() => setShowCart(true)}>
             <ShoppingCart size={16} />
             <span>Cart {itemCount > 0 ? `(${itemCount})` : ''}</span>
           </button>
@@ -863,14 +864,14 @@ function CustomerPage() {
       ) : null}
 
       {activeOrderId ? (
-        <section className="notice notice-info">
-          <div>
+        <section className="notice notice-info customer-active-order">
+          <div className="customer-active-copy">
             <strong>Active order #{activeOrderId}</strong>
-            <div>{progressText}</div>
+            <div className="customer-active-progress">{progressText}</div>
           </div>
-          <div className="notice-actions">
-            <span className={badgeClass(activeOrderStatus)}>{activeOrderStatus}</span>
-            <button type="button" className="btn btn-secondary" onClick={() => setShowTracking(true)}>
+          <div className="notice-actions customer-active-actions">
+            <span className={`${badgeClass(activeOrderStatus)} customer-active-badge`}>{activeOrderStatus}</span>
+            <button type="button" className="btn btn-secondary customer-track-btn" onClick={() => setShowTracking(true)}>
               <Eye size={16} />
               <span>Track order</span>
             </button>

@@ -1424,3 +1424,145 @@ body {
     grid-template-columns: 1fr;
   }
 }
+/* Compact customer header: preserve actions while reducing mobile visual weight. */
+.customer-branding {
+  min-width: 0;
+}
+
+.customer-page .customer-topbar {
+  align-items: center;
+  padding: 16px 18px;
+}
+
+.customer-page .customer-topbar h1 {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  line-height: 1;
+}
+
+.customer-page .customer-topbar p {
+  margin-top: 8px;
+}
+
+.customer-page .customer-actions {
+  justify-content: flex-end;
+}
+
+.customer-page .customer-active-order {
+  margin: 0;
+  padding: 13px 16px;
+}
+
+.customer-active-copy {
+  min-width: 0;
+}
+
+.customer-active-copy strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.customer-active-progress {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.customer-active-actions {
+  justify-content: flex-end;
+}
+
+.customer-track-btn {
+  min-height: 42px;
+}
+
+@media (max-width: 720px) {
+  .customer-page {
+    gap: 12px;
+  }
+
+  .customer-page .customer-topbar {
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .customer-page .customer-topbar h1 {
+    font-size: clamp(2rem, 9vw, 2.5rem);
+  }
+
+  .customer-page .customer-topbar p {
+    margin-top: 5px;
+    font-size: 15px;
+  }
+
+  .customer-page .customer-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .customer-page .customer-actions .btn {
+    min-height: 44px;
+    padding: 9px 10px;
+    font-size: 14px;
+  }
+
+  .customer-page .customer-actions .customer-cart-btn {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-height: 46px;
+  }
+
+  .customer-page .customer-actions .customer-message-btn {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .customer-page .customer-actions .customer-refresh-btn {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .customer-page .customer-active-order {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px 12px;
+    padding: 12px 14px;
+  }
+
+  .customer-page .customer-active-actions {
+    display: contents;
+  }
+
+  .customer-page .customer-active-badge {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .customer-page .customer-track-btn {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .customer-page .customer-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .customer-page .customer-actions .btn {
+    width: 100%;
+  }
+}
+
+.customer-page {
+  align-content: start;
+}
