@@ -1566,3 +1566,70 @@ body {
 .customer-page {
   align-content: start;
 }
+
+/* Menu food imagery: project-local PNG assets tuned for the IRMS dark orange UI. */
+.menu-card-media {
+  position: relative;
+  inline-size: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid rgba(245, 124, 0, 0.28);
+  border-radius: var(--radius);
+  background: radial-gradient(circle at 70% 10%, rgba(245, 124, 0, 0.26), transparent 38%), var(--surface-2);
+  margin-bottom: 12px;
+}
+
+.menu-card-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(18, 18, 18, 0.28));
+  pointer-events: none;
+}
+
+.menu-card-media img,
+.manager-menu-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menu-card-image-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--accent-hover);
+}
+
+.manager-menu-preview {
+  inline-size: 100%;
+  aspect-ratio: 16 / 8;
+  overflow: hidden;
+  border: 1px solid rgba(245, 124, 0, 0.24);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  margin-bottom: 12px;
+}
+
+.manager-menu-preview-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--accent-hover);
+  background: radial-gradient(circle at 50% 30%, rgba(245, 124, 0, 0.2), transparent 42%), var(--surface-2);
+}
+
+[data-theme="light"] .menu-card-media,
+[data-theme="light"] .manager-menu-preview {
+  border-color: rgba(214, 90, 0, 0.24);
+  background: #fff4e7;
+}
+
+@media (max-width: 720px) {
+  .menu-card-media {
+    aspect-ratio: 16 / 9;
+  }
+}

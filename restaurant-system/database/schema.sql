@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- INTELLIGENT RESTAURANT MANAGEMENT SYSTEM
 -- Database Schema (MySQL)
 -- ============================================================
@@ -165,17 +165,17 @@ INSERT INTO restaurant_tables (table_number, qr_token) VALUES
 ('T5', 'qr_token_table_5');
 
 -- Sample menu items
-INSERT INTO menu_items (category_id, item_name, description, price, average_preparation_time, availability_status) VALUES
-(1, 'Jollof Rice & Chicken', 'Nigerian party-style jollof rice served with grilled chicken', 2500.00, 15, 'available'),
-(1, 'Fried Rice & Fish', 'Seasoned fried rice with grilled tilapia', 2800.00, 12, 'available'),
-(1, 'Egusi Soup & Eba', 'Rich melon seed soup with eba', 2200.00, 20, 'available'),
-(1, 'Pounded Yam & Oha Soup', 'Smooth pounded yam with fresh oha leaf soup', 2600.00, 18, 'available'),
-(2, 'Chapman', 'Refreshing fruity cocktail drink', 800.00, 3, 'available'),
-(2, 'Fresh Juice (Orange)', 'Freshly squeezed orange juice', 700.00, 5, 'available'),
-(2, 'Soft Drink (Can)', 'Coke, Fanta, or Sprite', 400.00, 1, 'available'),
-(3, 'Chin Chin', 'Crunchy homemade chin chin', 500.00, 2, 'available'),
-(3, 'Puff Puff', 'Soft deep-fried dough balls', 400.00, 8, 'available'),
-(4, 'Samosa (3 pcs)', 'Crispy vegetable samosa', 600.00, 5, 'available');
+INSERT INTO menu_items (category_id, item_name, description, price, average_preparation_time, availability_status, image_url) VALUES
+(1, 'Jollof Rice & Chicken', 'Nigerian party-style jollof rice served with grilled chicken', 2500.00, 15, 'available', 'menu-images/jollof-rice-chicken.png'),
+(1, 'Fried Rice & Fish', 'Seasoned fried rice with grilled tilapia', 2800.00, 12, 'available', 'menu-images/fried-rice-fish.png'),
+(1, 'Egusi Soup & Eba', 'Rich melon seed soup with eba', 2200.00, 20, 'available', 'menu-images/egusi-soup-eba.png'),
+(1, 'Pounded Yam & Oha Soup', 'Smooth pounded yam with fresh oha leaf soup', 2600.00, 18, 'available', 'menu-images/pounded-yam-oha.png'),
+(2, 'Chapman', 'Refreshing fruity cocktail drink', 800.00, 3, 'available', 'menu-images/chapman.png'),
+(2, 'Fresh Juice (Orange)', 'Freshly squeezed orange juice', 700.00, 5, 'available', 'menu-images/fresh-orange-juice.png'),
+(2, 'Soft Drink (Can)', 'Coke, Fanta, or Sprite', 400.00, 1, 'available', 'menu-images/soft-drink-can.png'),
+(3, 'Chin Chin', 'Crunchy homemade chin chin', 500.00, 2, 'available', 'menu-images/chin-chin.png'),
+(3, 'Puff Puff', 'Soft deep-fried dough balls', 400.00, 8, 'available', 'menu-images/puff-puff.png'),
+(4, 'Samosa (3 pcs)', 'Crispy vegetable samosa', 600.00, 5, 'available', 'menu-images/samosa.png');
 
 INSERT INTO preparation_time_records (menu_item_id, average_preparation_time)
 SELECT menu_item_id, average_preparation_time FROM menu_items;
@@ -188,3 +188,4 @@ INSERT INTO stock_items (item_name, quantity_available, unit, stock_status) VALU
 ('Palm Oil', 10.00, 'litres', 'available'),
 ('Egusi', 5.00, 'kg', 'low'),
 ('Tomatoes', 8.00, 'kg', 'available');
+

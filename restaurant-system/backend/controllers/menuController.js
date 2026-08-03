@@ -87,7 +87,7 @@ const addMenuItem = async (req, res) => {
 
 const updateMenuItem = async (req, res) => {
   const { id } = req.params;
-  const { item_name, description, price, average_preparation_time, availability_status } = req.body;
+  const { item_name, description, price, average_preparation_time, availability_status, image_url } = req.body;
   const validStatuses = ['available', 'out_of_stock'];
 
   if (!isPositiveInteger(id) || !item_name || !isPositiveNumber(price) || !isPositiveInteger(average_preparation_time) || !validStatuses.includes(availability_status)) {
@@ -99,9 +99,9 @@ const updateMenuItem = async (req, res) => {
     try {
       await conn.beginTransaction();
       const [result] = await conn.query(
-        `UPDATE menu_items SET item_name=?, description=?, price=?, average_preparation_time=?, availability_status=?
+        `UPDATE menu_items SET item_name=?, description=?, price=?, average_preparation_time=?, availability_status=?, image_url=?
          WHERE menu_item_id=?`,
-        [item_name.trim(), description || null, Number(price), Number(average_preparation_time), availability_status, id]
+        [item_name.trim(), description || null, Number(price), Number(average_preparation_time), availability_status, image_url || null, id]
       );
       if (result.affectedRows === 0) {
         await conn.rollback();
@@ -153,3 +153,4 @@ const deleteMenuItem = async (req, res) => {
 };
 
 module.exports = { getAllMenuItems, getMenuByCategory, addMenuItem, updateMenuItem, deleteMenuItem };
+

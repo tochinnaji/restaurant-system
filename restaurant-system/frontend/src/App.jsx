@@ -127,6 +127,14 @@ function appPath(path) {
   return APP_BASE_PATH === '/' ? normalizedPath : `${APP_BASE_PATH}${normalizedPath}`;
 }
 
+function menuImageSrc(imageUrl) {
+  const trimmed = String(imageUrl || '').trim();
+  if (!trimmed) return '';
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith('/')) return appPath(trimmed);
+  return `${import.meta.env.BASE_URL}${trimmed.replace(/^\/+/, '')}`;
+}
+
 const ToastContext = createContext(null);
 const ThemeContext = createContext(null);
 const THEME_STORAGE_KEY = 'irms_theme';
@@ -896,6 +904,15 @@ function CustomerPage() {
       <section className="menu-grid">
         {currentItems.map((item) => (
           <article key={item.menu_item_id} className={classNames('menu-card', item.availability_status !== 'available' && 'muted')}>
+            <div className="menu-card-media">
+              {menuImageSrc(item.image_url) ? (
+                <img src={menuImageSrc(item.image_url)} alt={item.item_name} loading="lazy" />
+              ) : (
+                <div className="menu-card-image-fallback" aria-hidden="true">
+                  <ChefHat size={34} />
+                </div>
+              )}
+            </div>
             <div className="menu-card-head">
               <div className="menu-card-icon">
                 <ChefHat size={18} />
@@ -1367,6 +1384,7 @@ function MenuPage() {
     image_url: ''
   });
   const [editing, setEditing] = useState(null);
+  const [allItems, setAllItems] = useState([]);
 
   const load = async () => {
     const [menuRes, publicRes] = await Promise.all([api.get('/menu/all'), api.get('/menu')]);
@@ -1375,6 +1393,7 @@ function MenuPage() {
       return;
     }
     setGroups(publicRes.data || []);
+    setAllItems(menuRes.data || []);
     if (!form.category_id && (publicRes.data || [])[0]?.category_id) {
       setForm((current) => ({ ...current, category_id: String((publicRes.data || [])[0].category_id) }));
     }
@@ -1382,7 +1401,7 @@ function MenuPage() {
 
   useEffect(() => { load(); }, []);
 
-  const flatItems = useMemo(() => groups.flatMap((category) => category.items.map((item) => ({ ...item, category_name: category.category_name }))), [groups]);
+  const flatItems = useMemo(() => allItems, [allItems]);
 
   async function onCreate(event) {
     event.preventDefault();
@@ -1408,7 +1427,8 @@ function MenuPage() {
       description: editing.description || '',
       price: Number(editing.price),
       average_preparation_time: Number(editing.average_preparation_time),
-      availability_status: editing.availability_status
+      availability_status: editing.availability_status,
+      image_url: editing.image_url || ''
     });
     if (!res.success) {
       pushToast('danger', res.message || 'Could not update menu item.');
@@ -1467,6 +1487,7 @@ function MenuPage() {
                     <option value="available">Available</option>
                     <option value="out_of_stock">Out of stock</option>
                   </Select>
+                  <Input label="Image URL" value={editing.image_url || ''} onChange={(e) => setEditing((current) => ({ ...current, image_url: e.target.value }))} />
                   <Textarea label="Description" rows={3} value={editing.description || ''} onChange={(e) => setEditing((current) => ({ ...current, description: e.target.value }))} />
                   <div className="card-actions">
                     <Button icon={Save} type="submit">Save</Button>
@@ -1475,6 +1496,13 @@ function MenuPage() {
                 </form>
               ) : (
                 <>
+                  <div className="manager-menu-preview">
+                    {menuImageSrc(item.image_url) ? (
+                      <img src={menuImageSrc(item.image_url)} alt={item.item_name} loading="lazy" />
+                    ) : (
+                      <div className="manager-menu-preview-fallback" aria-hidden="true"><ChefHat size={24} /></div>
+                    )}
+                  </div>
                   <div className="order-head">
                     <strong>{item.item_name}</strong>
                     <span className={badgeClass(item.availability_status)}>{item.availability_status}</span>
@@ -1482,6 +1510,7 @@ function MenuPage() {
                   <div className="list-row"><span>Category</span><strong>{item.category_name}</strong></div>
                   <div className="list-row"><span>Price</span><strong>{formatNaira(item.price)}</strong></div>
                   <div className="list-row"><span>Prep time</span><strong>{item.average_preparation_time} min</strong></div>
+                  <div className="list-row"><span>Image</span><span>{item.image_url || '-'}</span></div>
                   <div className="list-row"><span>Description</span><span>{item.description || '-'}</span></div>
                   <div className="card-actions">
                     <Button icon={Edit3} variant="secondary" onClick={() => setEditing({ ...item, price: String(item.price), average_preparation_time: String(item.average_preparation_time) })}>Edit</Button>
@@ -1921,3 +1950,4 @@ function Modal({ open, title, onClose, children }) {
 }
 
 export default App;
+
