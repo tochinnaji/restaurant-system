@@ -695,6 +695,7 @@ function CustomerPage() {
     }
     pushToast('success', 'No active order notifications yet.');
   }
+
   async function submitCart() {
     if (canAddToCurrentOrder) {
       await addItemsToCurrentOrder();
@@ -865,6 +866,17 @@ function CustomerPage() {
           <h1>{APP_NAME}</h1>
           <p>{tableHint}</p>
         </div>
+        <div className="customer-mobile-actions" aria-label="Customer mobile actions">
+          <button type="button" className="customer-mobile-action" onClick={openNotifications} aria-label="Notifications">
+            <span className="customer-mobile-action-icon">
+              <Bell size={18} />
+              {activeOrderId ? <span className="customer-mobile-action-dot" aria-hidden="true" /> : null}
+            </span>
+          </button>
+          <button type="button" className="customer-mobile-action" onClick={() => setShowMessage(true)} aria-label="Message kitchen">
+            <MessageSquareText size={18} />
+          </button>
+        </div>
         <div className="customer-actions">
           <button type="button" className="btn btn-secondary customer-message-btn" onClick={() => setShowMessage(true)}>
             <MessageSquareText size={16} />
@@ -966,10 +978,10 @@ function CustomerPage() {
         </button>
         <button type="button" className="bottom-nav-item" onClick={openNotifications}>
           <span className="bottom-nav-icon-wrap">
-            <Bell size={20} />
+            <ClipboardList size={20} />
             {activeOrderId ? <span className="bottom-nav-dot" aria-hidden="true" /> : null}
           </span>
-          <span>Alerts</span>
+          <span>Track</span>
         </button>
         <button type="button" className="bottom-nav-item cart" onClick={() => setShowCart(true)}>
           <span className="bottom-nav-icon-wrap">
@@ -1989,5 +2001,7 @@ function Modal({ open, title, onClose, children }) {
 }
 
 export default App;
+
+
 
 

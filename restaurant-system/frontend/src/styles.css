@@ -1926,3 +1926,81 @@ body {
     width: 100%;
   }
 }
+
+/* Mobile header utilities and modal layering fixes. */
+.customer-mobile-actions {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .customer-page .customer-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .customer-mobile-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .customer-mobile-action {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(245, 124, 0, 0.28);
+    border-radius: 50%;
+    background: rgba(37, 37, 37, 0.92);
+    color: var(--text);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  [data-theme="light"] .customer-mobile-action {
+    background: rgba(255, 255, 255, 0.94);
+    color: #23150a;
+    box-shadow: 0 10px 24px rgba(47, 34, 19, 0.1);
+  }
+
+  .customer-mobile-action-icon {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .customer-mobile-action-dot {
+    position: absolute;
+    top: -4px;
+    right: -5px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent-hover);
+    box-shadow: 0 0 0 2px rgba(37, 37, 37, 0.92);
+  }
+
+  [data-theme="light"] .customer-mobile-action-dot {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.94);
+  }
+
+  .customer-page .customer-branding {
+    min-width: 0;
+  }
+
+  .modal-backdrop {
+    z-index: 2600;
+    padding: 10px 10px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .modal-card {
+    max-height: calc(100dvh - 20px);
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .modal-card .btn {
+    min-height: 46px;
+  }
+}
