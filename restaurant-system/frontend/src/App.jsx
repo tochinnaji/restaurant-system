@@ -47,6 +47,23 @@ const BRAND_LOGO = `${import.meta.env.BASE_URL}brand/irms-selected-logo-source.p
 const APP_BASE_PATH = (import.meta.env.VITE_APP_BASE_PATH || '/frontend').replace(/\/+$/, '') || '/';
 const QR_CONTEXT_KEY = 'irms_qr_context';
 const ORDER_HISTORY_KEY = 'irms_order_history';
+const HOME_SLIDES = [
+  {
+    main: 'menu-images/jollof-rice-chicken.png',
+    top: 'menu-images/chapman.png',
+    bottom: 'menu-images/samosa.png'
+  },
+  {
+    main: 'menu-images/fried-rice-fish.png',
+    top: 'menu-images/fresh-orange-juice.png',
+    bottom: 'menu-images/puff-puff.png'
+  },
+  {
+    main: 'menu-images/pounded-yam-oha.png',
+    top: 'menu-images/chin-chin.png',
+    bottom: 'menu-images/egusi-soup-eba.png'
+  }
+];
 const ORDER_HISTORY_TTL_MS = 24 * 60 * 60 * 1000;
 
 function readStoredQrContext() {
@@ -538,6 +555,7 @@ function CustomerPage() {
   const [showTracking, setShowTracking] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [customerView, setCustomerView] = useState('home');
+  const [homeSlideIndex, setHomeSlideIndex] = useState(0);
   const [messageText, setMessageText] = useState('');
   const [paymentEmail, setPaymentEmail] = useState('');
   const [loadingOrder, setLoadingOrder] = useState(false);
@@ -557,6 +575,13 @@ function CustomerPage() {
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHomeSlideIndex((current) => (current + 1) % HOME_SLIDES.length);
+    }, 4200);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -604,6 +629,7 @@ function CustomerPage() {
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const tableHint = qrToken ? `Table ${tableNumber}` : `Table ${tableNumber} - scan a valid QR link`;
+  const homeSlide = HOME_SLIDES[homeSlideIndex];
 
   async function refreshTableOrderHistory() {
     const currentHistory = readOrderHistory()[tableNumber] || [];
@@ -948,9 +974,14 @@ function CustomerPage() {
               </div>
             </div>
             <div className="home-visual-stack" aria-hidden="true">
-              <img className="home-plate main" src={menuImageSrc('menu-images/jollof-rice-chicken.png')} alt="" />
-              <img className="home-plate side top" src={menuImageSrc('menu-images/chapman.png')} alt="" />
-              <img className="home-plate side bottom" src={menuImageSrc('menu-images/samosa.png')} alt="" />
+              <img key={`main-${homeSlide.main}`} className="home-plate main" src={menuImageSrc(homeSlide.main)} alt="" />
+              <img key={`top-${homeSlide.top}`} className="home-plate side top" src={menuImageSrc(homeSlide.top)} alt="" />
+              <img key={`bottom-${homeSlide.bottom}`} className="home-plate side bottom" src={menuImageSrc(homeSlide.bottom)} alt="" />
+              <div className="home-slide-dots">
+                {HOME_SLIDES.map((slide, index) => (
+                  <span key={slide.main} className={classNames(index === homeSlideIndex && 'active')} />
+                ))}
+              </div>
               <span className="home-steam one" />
               <span className="home-steam two" />
               <span className="home-steam three" />
@@ -2111,6 +2142,8 @@ function Modal({ open, title, onClose, children }) {
 }
 
 export default App;
+
+
 
 
 
