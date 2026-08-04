@@ -536,6 +536,8 @@ function CustomerPage() {
   const [showMessage, setShowMessage] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [customerView, setCustomerView] = useState('home');
   const [messageText, setMessageText] = useState('');
   const [paymentEmail, setPaymentEmail] = useState('');
   const [loadingOrder, setLoadingOrder] = useState(false);
@@ -681,21 +683,20 @@ function CustomerPage() {
   }
 
   function scrollToCustomerTop() {
+    setCustomerView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function scrollToMenu() {
-    menuSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setCustomerView('menu');
+    window.setTimeout(() => {
+      menuSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }
 
   function openNotifications() {
-    if (activeOrderId) {
-      setShowTracking(true);
-      return;
-    }
-    pushToast('success', 'No active order notifications yet.');
+    setShowNotifications(true);
   }
-
   async function submitCart() {
     if (canAddToCurrentOrder) {
       await addItemsToCurrentOrder();
@@ -834,6 +835,19 @@ function CustomerPage() {
   };
   const progressText = statusTrackingText[activeOrderStatus] || timeLeftText;
   const canAddToCurrentOrder = activeOrderId && ['pending'].includes(activeOrderStatus) && ['unpaid', 'pending'].includes(activeOrder?.payment_status || 'unpaid');
+  const notificationItems = useMemo(() => {
+    if (!activeOrderId) {
+      return [{ title: 'No active order yet', body: 'Place an order and this bell will show kitchen, payment, and receipt updates.', tone: 'muted' }];
+    }
+    const items = [
+      { title: `Order #${activeOrderId}`, body: progressText, tone: activeOrderStatus },
+      { title: 'Payment status', body: activeOrder?.payment_status === 'paid' ? 'Payment successful. Receipt is ready below.' : `Payment is ${activeOrder?.payment_status || 'unpaid'}.`, tone: activeOrder?.payment_status === 'paid' ? 'paid' : 'pending' }
+    ];
+    if (activeOrderStatus === 'ready') items.unshift({ title: 'Ready for pickup', body: 'Your order is ready. Please meet the kitchen or service desk.', tone: 'ready' });
+    if (activeOrderStatus === 'delivered') items.unshift({ title: 'Delivered', body: 'This order has been marked delivered. Thank you for dining with us.', tone: 'delivered' });
+    if (activeOrderStatus === 'pending') items.push({ title: 'Kitchen queue', body: 'Your request is pending and will be accepted by the kitchen.', tone: 'pending' });
+    return items;
+  }, [activeOrder, activeOrderId, activeOrderStatus, progressText]);
 
   useEffect(() => {
     if (!activeOrder) return;
@@ -915,68 +929,133 @@ function CustomerPage() {
         </section>
       ) : null}
 
-      <section ref={menuSectionRef} className="category-strip">
-        {menu.map((category) => (
-          <button
-            key={category.category_id}
-            type="button"
-            className={classNames('category-btn', category.category_id === activeCategory && 'active')}
-            title={`View ${category.category_name}`}
-            onClick={() => setActiveCategory(category.category_id)}
-          >
-            {category.category_name}
-          </button>
-        ))}
-      </section>
+      {customerView === 'home' ? (
+        <section className="customer-home" aria-label="Restaurant home">
+          <div className="home-hero-panel">
+            <div className="home-hero-copy">
+              <span className="home-kicker">IRMS demo restaurant</span>
+              <h2>Fast table ordering with a warm kitchen feel.</h2>
+              <p>Explore a demo restaurant experience for QR ordering, fresh local meals, kitchen updates, and easy digital payment.</p>
+              <div className="home-hero-actions">
+                <button type="button" className="btn btn-primary" onClick={scrollToMenu}>
+                  <Menu size={16} />
+                  <span>Browse menu</span>
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowMessage(true)}>
+                  <MessageSquareText size={16} />
+                  <span>Ask kitchen</span>
+                </button>
+              </div>
+            </div>
+            <div className="home-visual-stack" aria-hidden="true">
+              <img className="home-plate main" src={menuImageSrc('menu-images/jollof-rice-chicken.png')} alt="" />
+              <img className="home-plate side top" src={menuImageSrc('menu-images/chapman.png')} alt="" />
+              <img className="home-plate side bottom" src={menuImageSrc('menu-images/samosa.png')} alt="" />
+              <span className="home-steam one" />
+              <span className="home-steam two" />
+              <span className="home-steam three" />
+            </div>
+          </div>
 
-      <section className="menu-grid">
-        {currentItems.map((item) => (
-          <article key={item.menu_item_id} className={classNames('menu-card', item.availability_status !== 'available' && 'muted')}>
-            <div className="menu-card-media">
-              {menuImageSrc(item.image_url) ? (
-                <img src={menuImageSrc(item.image_url)} alt={item.item_name} loading="lazy" />
-              ) : (
-                <div className="menu-card-image-fallback" aria-hidden="true">
-                  <ChefHat size={34} />
-                </div>
-              )}
+          <div className="home-feature-grid">
+            <article className="home-feature-card">
+              <ChefHat size={20} />
+              <strong>Kitchen-led meals</strong>
+              <p>Main courses, snacks, desserts, and drinks are grouped for quick browsing.</p>
+            </article>
+            <article className="home-feature-card">
+              <Clock3 size={20} />
+              <strong>Live wait estimates</strong>
+              <p>Prep-time records help customers see realistic order timing.</p>
+            </article>
+            <article className="home-feature-card">
+              <Wallet size={20} />
+              <strong>Simple payment</strong>
+              <p>Move from cart to payment without leaving the table ordering flow.</p>
+            </article>
+          </div>
+
+          <div className="home-story-panel">
+            <div>
+              <span className="home-kicker">What they offer</span>
+              <h3>Casual dining, made smoother.</h3>
+              <p>This demo restaurant blends Nigerian-inspired comfort plates with fast counter-service habits: scan, order, pay, track, and enjoy.</p>
             </div>
-            <div className="menu-card-head">
-              <div className="menu-card-icon">
-                <ChefHat size={18} />
-              </div>
-              <span className={badgeClass(item.availability_status)}>
-                {item.availability_status === 'out_of_stock' ? 'out of stock' : item.availability_status}
-              </span>
+            <div className="home-fact-list">
+              <span>QR table ordering</span>
+              <span>Kitchen messaging</span>
+              <span>24-hour order history</span>
+              <span>Receipt-ready payments</span>
             </div>
-            <h3>{item.item_name}</h3>
-            <p>{item.description || 'No description provided.'}</p>
-            <div className="menu-card-foot">
-              <div>
-                <strong>{formatNaira(item.price)}</strong>
-                <span>
-                  <Clock3 size={14} />
-                  <span>{item.average_preparation_time} min prep time</span>
-                </span>
-              </div>
-              <button type="button" className="btn btn-primary customer-add-btn" onClick={() => addItem(item)} disabled={item.availability_status !== 'available'}>
-                <Plus size={16} />
-                <span>Add</span>
+          </div>
+        </section>
+      ) : (
+        <>
+          <section ref={menuSectionRef} className="category-strip">
+            {menu.map((category) => (
+              <button
+                key={category.category_id}
+                type="button"
+                className={classNames('category-btn', category.category_id === activeCategory && 'active')}
+                title={`View ${category.category_name}`}
+                onClick={() => setActiveCategory(category.category_id)}
+              >
+                {category.category_name}
               </button>
-            </div>
-          </article>
-        ))}
-      </section>
+            ))}
+          </section>
+
+          <section className="menu-grid">
+            {currentItems.map((item) => (
+              <article key={item.menu_item_id} className={classNames('menu-card', item.availability_status !== 'available' && 'muted')}>
+                <div className="menu-card-media">
+                  {menuImageSrc(item.image_url) ? (
+                    <img src={menuImageSrc(item.image_url)} alt={item.item_name} loading="lazy" />
+                  ) : (
+                    <div className="menu-card-image-fallback" aria-hidden="true">
+                      <ChefHat size={34} />
+                    </div>
+                  )}
+                </div>
+                <div className="menu-card-head">
+                  <div className="menu-card-icon">
+                    <ChefHat size={18} />
+                  </div>
+                  <span className={badgeClass(item.availability_status)}>
+                    {item.availability_status === 'out_of_stock' ? 'out of stock' : item.availability_status}
+                  </span>
+                </div>
+                <h3>{item.item_name}</h3>
+                <p>{item.description || 'No description provided.'}</p>
+                <div className="menu-card-foot">
+                  <div>
+                    <strong>{formatNaira(item.price)}</strong>
+                    <span>
+                      <Clock3 size={14} />
+                      <span>{item.average_preparation_time} min prep time</span>
+                    </span>
+                  </div>
+                  <button type="button" className="btn btn-primary customer-add-btn" onClick={() => addItem(item)} disabled={item.availability_status !== 'available'}>
+                    <Plus size={16} />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </article>
+            ))}
+          </section>
+        </>
+      )}
+
       <nav className="customer-bottom-nav" aria-label="Customer quick actions">
-        <button type="button" className="bottom-nav-item active" onClick={scrollToCustomerTop}>
+        <button type="button" className={classNames('bottom-nav-item', customerView === 'home' && 'active')} onClick={scrollToCustomerTop}>
           <Home size={20} />
           <span>Home</span>
         </button>
-        <button type="button" className="bottom-nav-item" onClick={scrollToMenu}>
+        <button type="button" className={classNames('bottom-nav-item', customerView === 'menu' && 'active')} onClick={scrollToMenu}>
           <Menu size={20} />
           <span>Menu</span>
         </button>
-        <button type="button" className="bottom-nav-item" onClick={openNotifications}>
+        <button type="button" className="bottom-nav-item" onClick={() => activeOrderId ? setShowTracking(true) : pushToast('success', 'Place an order to start tracking.')}>
           <span className="bottom-nav-icon-wrap">
             <ClipboardList size={20} />
             {activeOrderId ? <span className="bottom-nav-dot" aria-hidden="true" /> : null}
@@ -1035,6 +1114,37 @@ function CustomerPage() {
         </div>
       </Modal>
 
+      <Modal open={showNotifications} title="Notifications" onClose={() => setShowNotifications(false)}>
+        <div className="stack notification-stack">
+          {notificationItems.map((item) => (
+            <div key={`${item.title}-${item.body}`} className={classNames('notification-row', `tone-${item.tone}`)}>
+              <Bell size={16} />
+              <div>
+                <strong>{item.title}</strong>
+                <span>{item.body}</span>
+              </div>
+            </div>
+          ))}
+          {activeOrder?.payment_status === 'paid' ? (
+            <div className="receipt-panel">
+              <div className="summary-row">
+                <span>Receipt</span>
+                <strong>Order #{activeOrderId}</strong>
+              </div>
+              {(activeOrder.items || []).map((item) => (
+                <div key={`receipt-${item.menu_item_id}-${item.quantity}`} className="summary-row">
+                  <span>{(item.item_name || item.name)} x{item.quantity}</span>
+                  <strong>{formatNaira(item.subtotal)}</strong>
+                </div>
+              ))}
+              <div className="summary-row">
+                <span>Total paid</span>
+                <strong>{formatNaira(activeOrder.total_amount)}</strong>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </Modal>
       <Modal open={showTracking} title={`Order #${activeOrderId || '-'}`} onClose={() => setShowTracking(false)}>
         {activeOrder ? (
           <div className="stack">
@@ -2001,6 +2111,10 @@ function Modal({ open, title, onClose, children }) {
 }
 
 export default App;
+
+
+
+
 
 
 
