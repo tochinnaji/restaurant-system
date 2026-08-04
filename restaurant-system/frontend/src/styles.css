@@ -1633,3 +1633,296 @@ body {
     aspect-ratio: 16 / 9;
   }
 }
+
+/* Mobile food-app shell for the customer ordering page. */
+.customer-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .customer-page {
+    padding: 12px 12px 96px;
+    gap: 14px;
+    background:
+      radial-gradient(circle at 90% -8%, rgba(245, 124, 0, 0.2), transparent 34%),
+      var(--bg);
+  }
+
+  .customer-page .customer-topbar {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 4px 2px 0;
+  }
+
+  .customer-page .customer-topbar h1 {
+    font-size: 34px;
+    letter-spacing: 0;
+  }
+
+  .customer-page .customer-topbar p {
+    max-width: 24ch;
+    color: #f0c18a;
+    font-size: 14px;
+  }
+
+  [data-theme="light"] .customer-page .customer-topbar p {
+    color: #8a4200;
+  }
+
+  .customer-page .customer-actions {
+    display: none;
+  }
+
+  .customer-page .customer-active-order {
+    border-color: rgba(245, 124, 0, 0.38);
+    background: linear-gradient(180deg, rgba(245, 124, 0, 0.14), rgba(37, 37, 37, 0.92));
+  }
+
+  [data-theme="light"] .customer-page .customer-active-order {
+    background: linear-gradient(180deg, #fff1dc, #ffffff);
+  }
+
+  .customer-page .category-strip {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin-inline: -12px;
+    padding: 8px 12px 10px;
+    background: linear-gradient(180deg, var(--bg) 74%, rgba(18, 18, 18, 0));
+  }
+
+  [data-theme="light"] .customer-page .category-strip {
+    background: linear-gradient(180deg, var(--bg) 74%, rgba(246, 242, 236, 0));
+  }
+
+  .customer-page .category-strip .category-btn,
+  .customer-page .category-strip .category-btn.active,
+  .customer-page .category-strip .category-btn:hover,
+  .customer-page .category-strip .category-btn:focus-visible {
+    block-size: 44px;
+    border-radius: 999px;
+    font-size: 13px !important;
+  }
+
+  .customer-page .menu-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .customer-page .menu-card {
+    position: relative;
+    min-height: 0;
+    padding: 8px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #292929, #202020);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+  }
+
+  [data-theme="light"] .customer-page .menu-card {
+    background: #ffffff;
+    box-shadow: 0 14px 30px rgba(47, 34, 19, 0.1);
+  }
+
+  .customer-page .menu-card-media {
+    aspect-ratio: 1 / 0.86;
+    margin-bottom: 9px;
+    border-radius: 14px;
+  }
+
+  .customer-page .menu-card-head {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    justify-content: flex-end;
+  }
+
+  .customer-page .menu-card-icon {
+    display: none;
+  }
+
+  .customer-page .menu-card-head .badge {
+    padding: 3px 7px;
+    background: rgba(18, 18, 18, 0.72);
+    color: #fff3df;
+    border-color: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(8px);
+  }
+
+  [data-theme="light"] .customer-page .menu-card-head .badge {
+    background: rgba(255, 255, 255, 0.82);
+    color: #5b2a00;
+    border-color: rgba(214, 90, 0, 0.18);
+  }
+
+  .customer-page .menu-card h3 {
+    min-height: 38px;
+    margin: 0 0 6px;
+    font-size: 15px;
+    line-height: 1.25;
+  }
+
+  .customer-page .menu-card p {
+    display: -webkit-box;
+    min-height: 38px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .customer-page .menu-card-foot {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .customer-page .menu-card-foot strong {
+    font-size: 15px;
+  }
+
+  .customer-page .menu-card-foot span {
+    font-size: 11px;
+  }
+
+  .customer-page .customer-add-btn {
+    width: auto;
+    min-width: 42px;
+    min-height: 38px;
+    padding: 0 11px;
+    border-radius: 999px;
+    box-shadow: 0 10px 20px rgba(214, 90, 0, 0.24);
+  }
+
+  .customer-page .customer-add-btn span {
+    display: none;
+  }
+
+  .customer-bottom-nav {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 1900;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    min-height: 68px;
+    padding: 7px;
+    border: 1px solid rgba(245, 124, 0, 0.26);
+    border-radius: 24px;
+    background: rgba(27, 27, 27, 0.94);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(18px);
+  }
+
+  [data-theme="light"] .customer-bottom-nav {
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 42px rgba(47, 34, 19, 0.16);
+  }
+
+  .bottom-nav-item {
+    position: relative;
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    min-width: 0;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+
+  .bottom-nav-item.active,
+  .bottom-nav-item:focus-visible,
+  .bottom-nav-item:hover {
+    background: rgba(245, 124, 0, 0.16);
+    color: #ffd8a6;
+    outline: none;
+  }
+
+  [data-theme="light"] .bottom-nav-item.active,
+  [data-theme="light"] .bottom-nav-item:focus-visible,
+  [data-theme="light"] .bottom-nav-item:hover {
+    color: #7a3700;
+  }
+
+  .bottom-nav-icon-wrap {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .bottom-nav-count,
+  .bottom-nav-dot {
+    position: absolute;
+    top: -7px;
+    right: -10px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-hover);
+    color: #1a120a;
+    font-size: 10px;
+    font-weight: 700;
+    box-shadow: 0 0 0 2px rgba(27, 27, 27, 0.94);
+  }
+
+  .bottom-nav-dot {
+    min-width: 8px;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    right: -4px;
+    top: -3px;
+  }
+
+  [data-theme="light"] .bottom-nav-count,
+  [data-theme="light"] .bottom-nav-dot {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.94);
+  }
+}
+
+@media (max-width: 380px) {
+  .customer-page .menu-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-page .customer-add-btn span {
+    display: inline;
+  }
+}
+
+@media (max-width: 720px) {
+  .theme-fab {
+    right: 18px;
+    bottom: 92px;
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 720px) {
+  .toast-stack {
+    left: 12px;
+    right: 12px;
+    bottom: 172px;
+  }
+
+  .toast {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+}

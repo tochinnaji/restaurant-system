@@ -8,6 +8,7 @@ import {
   Download,
   Edit3,
   Grid2x2,
+  Home,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -679,6 +680,21 @@ function CustomerPage() {
     }, 50);
   }
 
+  function scrollToCustomerTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function scrollToMenu() {
+    menuSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function openNotifications() {
+    if (activeOrderId) {
+      setShowTracking(true);
+      return;
+    }
+    pushToast('success', 'No active order notifications yet.');
+  }
   async function submitCart() {
     if (canAddToCurrentOrder) {
       await addItemsToCurrentOrder();
@@ -939,7 +955,30 @@ function CustomerPage() {
           </article>
         ))}
       </section>
-
+      <nav className="customer-bottom-nav" aria-label="Customer quick actions">
+        <button type="button" className="bottom-nav-item active" onClick={scrollToCustomerTop}>
+          <Home size={20} />
+          <span>Home</span>
+        </button>
+        <button type="button" className="bottom-nav-item" onClick={scrollToMenu}>
+          <Menu size={20} />
+          <span>Menu</span>
+        </button>
+        <button type="button" className="bottom-nav-item" onClick={openNotifications}>
+          <span className="bottom-nav-icon-wrap">
+            <Bell size={20} />
+            {activeOrderId ? <span className="bottom-nav-dot" aria-hidden="true" /> : null}
+          </span>
+          <span>Alerts</span>
+        </button>
+        <button type="button" className="bottom-nav-item cart" onClick={() => setShowCart(true)}>
+          <span className="bottom-nav-icon-wrap">
+            <ShoppingCart size={20} />
+            {itemCount > 0 ? <span className="bottom-nav-count">{itemCount}</span> : null}
+          </span>
+          <span>Cart</span>
+        </button>
+      </nav>
       <Modal open={showCart} title="Your order" onClose={() => setShowCart(false)}>
         <div className="stack">
           {cart.length === 0 ? <div className="empty">Your cart is empty.</div> : null}
@@ -1950,4 +1989,5 @@ function Modal({ open, title, onClose, children }) {
 }
 
 export default App;
+
 
