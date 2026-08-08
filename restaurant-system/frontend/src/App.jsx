@@ -48,21 +48,16 @@ const APP_BASE_PATH = (import.meta.env.VITE_APP_BASE_PATH || '/frontend').replac
 const QR_CONTEXT_KEY = 'irms_qr_context';
 const ORDER_HISTORY_KEY = 'irms_order_history';
 const HOME_SLIDES = [
-  {
-    main: 'menu-images/jollof-rice-chicken.png',
-    top: 'menu-images/chapman.png',
-    bottom: 'menu-images/samosa.png'
-  },
-  {
-    main: 'menu-images/fried-rice-chicken.png',
-    top: 'menu-images/fresh-orange-juice.png',
-    bottom: 'menu-images/puff-puff.png'
-  },
-  {
-    main: 'menu-images/pounded-yam-oha.png',
-    top: 'menu-images/chin-chin.png',
-    bottom: 'menu-images/egusi-soup-eba.png'
-  }
+  { main: 'menu-images/jollof-rice-chicken.png' },
+  { main: 'menu-images/fried-rice-chicken.png' },
+  { main: 'menu-images/egusi-soup-eba.png' },
+  { main: 'menu-images/pounded-yam-oha.png' },
+  { main: 'menu-images/chapman.png' },
+  { main: 'menu-images/fresh-orange-juice.png' },
+  { main: 'menu-images/soft-drinks.png' },
+  { main: 'menu-images/chin-chin.png' },
+  { main: 'menu-images/puff-puff.png' },
+  { main: 'menu-images/samosa.png' }
 ];
 const ORDER_HISTORY_TTL_MS = 24 * 60 * 60 * 1000;
 
