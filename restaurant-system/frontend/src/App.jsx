@@ -152,6 +152,31 @@ function menuImageSrc(imageUrl) {
   if (trimmed.startsWith('/')) return appPath(trimmed);
   return `${import.meta.env.BASE_URL}${trimmed.replace(/^\/+/, '')}`;
 }
+const MENU_IMAGE_ALIASES = {
+  'menu-images/fried-rice-fish.png': 'menu-images/fried-rice-chicken.png',
+  'menu-images/soft-drink-can.png': 'menu-images/soft-drinks.png',
+  'menu-images/soft-drinks-can.png': 'menu-images/soft-drinks.png'
+};
+
+const MENU_IMAGE_BY_NAME = {
+  'Jollof Rice & Chicken': 'menu-images/jollof-rice-chicken.png',
+  'Fried Rice & Fish': 'menu-images/fried-rice-chicken.png',
+  'Fried Rice & Chicken': 'menu-images/fried-rice-chicken.png',
+  'Egusi Soup & Eba': 'menu-images/egusi-soup-eba.png',
+  'Pounded Yam & Oha Soup': 'menu-images/pounded-yam-oha.png',
+  Chapman: 'menu-images/chapman.png',
+  'Fresh Juice (Orange)': 'menu-images/fresh-orange-juice.png',
+  'Soft Drink (Can)': 'menu-images/soft-drinks.png',
+  'Chin Chin': 'menu-images/chin-chin.png',
+  'Puff Puff': 'menu-images/puff-puff.png',
+  'Samosa (3 pcs)': 'menu-images/samosa.png'
+};
+
+function menuItemImageSrc(item) {
+  const imageUrl = String(item?.image_url || '').trim();
+  const resolvedImageUrl = MENU_IMAGE_ALIASES[imageUrl] || imageUrl || MENU_IMAGE_BY_NAME[item?.item_name] || '';
+  return menuImageSrc(resolvedImageUrl);
+}
 
 const ToastContext = createContext(null);
 const ThemeContext = createContext(null);
@@ -1040,8 +1065,8 @@ function CustomerPage() {
             {currentItems.map((item) => (
               <article key={item.menu_item_id} className={classNames('menu-card', item.availability_status !== 'available' && 'muted')}>
                 <div className="menu-card-media">
-                  {menuImageSrc(item.image_url) ? (
-                    <img src={menuImageSrc(item.image_url)} alt={item.item_name} loading="lazy" />
+                  {menuItemImageSrc(item) ? (
+                    <img src={menuItemImageSrc(item)} alt={item.item_name} loading="lazy" />
                   ) : (
                     <div className="menu-card-image-fallback" aria-hidden="true">
                       <ChefHat size={34} />
@@ -1689,8 +1714,8 @@ function MenuPage() {
               ) : (
                 <>
                   <div className="manager-menu-preview">
-                    {menuImageSrc(item.image_url) ? (
-                      <img src={menuImageSrc(item.image_url)} alt={item.item_name} loading="lazy" />
+                    {menuItemImageSrc(item) ? (
+                      <img src={menuItemImageSrc(item)} alt={item.item_name} loading="lazy" />
                     ) : (
                       <div className="manager-menu-preview-fallback" aria-hidden="true"><ChefHat size={24} /></div>
                     )}
