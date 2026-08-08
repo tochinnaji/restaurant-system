@@ -54,7 +54,7 @@ const HOME_SLIDES = [
     bottom: 'menu-images/samosa.png'
   },
   {
-    main: 'menu-images/fried-rice-fish.png',
+    main: 'menu-images/fried-rice-chicken.png',
     top: 'menu-images/fresh-orange-juice.png',
     bottom: 'menu-images/puff-puff.png'
   },
@@ -959,7 +959,7 @@ function CustomerPage() {
         <section className="customer-home" aria-label="Restaurant home">
           <div className="home-hero-panel">
             <div className="home-hero-copy">
-              <span className="home-kicker">IRMS demo restaurant</span>
+              <span className="home-kicker">IRMS restaurant</span>
               <h2>Fast table ordering with a warm kitchen feel.</h2>
               <p>Explore a demo restaurant experience for QR ordering, fresh local meals, kitchen updates, and easy digital payment.</p>
               <div className="home-hero-actions">
@@ -1008,9 +1008,9 @@ function CustomerPage() {
 
           <div className="home-story-panel">
             <div>
-              <span className="home-kicker">What they offer</span>
+              <span className="home-kicker">What we offer</span>
               <h3>Casual dining, made smoother.</h3>
-              <p>This demo restaurant blends Nigerian-inspired comfort plates with fast counter-service habits: scan, order, pay, track, and enjoy.</p>
+              <p>This restaurant blends Nigerian-inspired comfort plates with fast counter-service habits: scan, order, pay, track, and enjoy.</p>
             </div>
             <div className="home-fact-list">
               <span>QR table ordering</span>
@@ -2142,13 +2142,4 @@ function Modal({ open, title, onClose, children }) {
 }
 
 export default App;
-
-
-
-
-
-
-
-
-
 

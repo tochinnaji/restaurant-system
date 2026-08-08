@@ -1593,6 +1593,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
 }
 
 .menu-card-image-fallback {
@@ -2101,6 +2102,8 @@ body {
   position: absolute;
   display: block;
   object-fit: cover;
+  object-position: center;
+  background: var(--surface-2);
   border: 1px solid rgba(245, 124, 0, 0.32);
   border-radius: 28px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
@@ -2108,6 +2111,7 @@ body {
 
 .home-plate.main {
   width: min(330px, 84%);
+  height: 258px;
   aspect-ratio: 1 / 0.78;
   right: 20px;
   top: 46px;
@@ -2116,6 +2120,7 @@ body {
 
 .home-plate.side {
   width: 128px;
+  height: 128px;
   aspect-ratio: 1;
   border-radius: 22px;
   animation: homeFloat 5.4s ease-in-out infinite reverse;
@@ -2286,10 +2291,12 @@ body {
     right: 10px;
     top: 34px;
     width: min(270px, 82%);
+    height: 210px;
   }
 
   .home-plate.side {
     width: 98px;
+    height: 98px;
   }
 
   .home-feature-grid,
@@ -2365,3 +2372,4 @@ body {
     transition: none;
   }
 }
+
