@@ -2095,61 +2095,36 @@ body {
 
 .home-visual-stack {
   position: relative;
-  min-height: 280px;
+  min-height: 300px;
+  overflow: hidden;
+  border: 1px solid rgba(245, 124, 0, 0.32);
+  border-radius: 28px;
+  background: var(--surface-2);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
+}
+
+.home-visual-stack::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.06), rgba(18, 18, 18, 0.24));
+  pointer-events: none;
 }
 
 .home-plate {
   position: absolute;
+  inset: 0;
   display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: center;
-  background: var(--surface-2);
-  border: 1px solid rgba(245, 124, 0, 0.32);
-  border-radius: 28px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
 }
 
-.home-plate.main {
-  width: min(330px, 84%);
-  height: 258px;
-  aspect-ratio: 1 / 0.78;
-  right: 20px;
-  top: 46px;
-  animation: homeFloat 4.8s ease-in-out infinite;
-}
-
-.home-plate.side {
-  width: 128px;
-  height: 128px;
-  aspect-ratio: 1;
-  border-radius: 22px;
-  animation: homeFloat 5.4s ease-in-out infinite reverse;
-}
-
-.home-plate.side.top {
-  right: 0;
-  top: 0;
-}
-
-.home-plate.side.bottom {
-  left: 8px;
-  bottom: 18px;
-}
-
+.home-plate.side,
 .home-steam {
-  position: absolute;
-  width: 8px;
-  height: 46px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 224, 169, 0), rgba(255, 224, 169, 0.6), rgba(255, 224, 169, 0));
-  filter: blur(2px);
-  animation: steamRise 2.8s ease-in-out infinite;
+  display: none;
 }
-
-.home-steam.one { right: 210px; top: 24px; }
-.home-steam.two { right: 176px; top: 10px; animation-delay: 0.5s; }
-.home-steam.three { right: 142px; top: 30px; animation-delay: 1s; }
-
 .home-feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2284,19 +2259,7 @@ body {
   }
 
   .home-visual-stack {
-    min-height: 230px;
-  }
-
-  .home-plate.main {
-    right: 10px;
-    top: 34px;
-    width: min(270px, 82%);
-    height: 210px;
-  }
-
-  .home-plate.side {
-    width: 98px;
-    height: 98px;
+    min-height: 240px;
   }
 
   .home-feature-grid,
@@ -2309,33 +2272,10 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .home-plate,
-  .home-steam {
-    animation: none;
-  }
-}
-
-/* Home photo carousel motion. Replace HOME_SLIDES paths in App.jsx with real restaurant photos. */
-.home-plate {
-  animation-name: homePhotoIn, homeFloat;
-  animation-duration: 520ms, 4.8s;
-  animation-timing-function: ease, ease-in-out;
-  animation-iteration-count: 1, infinite;
-}
-
-.home-plate.side {
-  animation-name: homePhotoIn, homeFloat;
-  animation-duration: 520ms, 5.4s;
-  animation-timing-function: ease, ease-in-out;
-  animation-iteration-count: 1, infinite;
-  animation-direction: normal, reverse;
-}
-
 .home-slide-dots {
   position: absolute;
-  right: 26px;
-  bottom: 14px;
+  right: 18px;
+  bottom: 16px;
   z-index: 4;
   display: inline-flex;
   gap: 6px;
@@ -2351,25 +2291,10 @@ body {
   height: 7px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.35);
-  transition: width 180ms ease, background-color 180ms ease;
 }
 
 .home-slide-dots span.active {
   width: 18px;
   background: var(--accent-hover);
-}
-
-@keyframes homePhotoIn {
-  from { opacity: 0; transform: translateX(16px) scale(0.98); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-plate,
-  .home-plate.side,
-  .home-slide-dots span {
-    animation: none;
-    transition: none;
-  }
 }
 

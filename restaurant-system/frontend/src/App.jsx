@@ -1000,16 +1000,11 @@ function CustomerPage() {
             </div>
             <div className="home-visual-stack" aria-hidden="true">
               <img key={`main-${homeSlide.main}`} className="home-plate main" src={menuImageSrc(homeSlide.main)} alt="" />
-              <img key={`top-${homeSlide.top}`} className="home-plate side top" src={menuImageSrc(homeSlide.top)} alt="" />
-              <img key={`bottom-${homeSlide.bottom}`} className="home-plate side bottom" src={menuImageSrc(homeSlide.bottom)} alt="" />
               <div className="home-slide-dots">
                 {HOME_SLIDES.map((slide, index) => (
                   <span key={slide.main} className={classNames(index === homeSlideIndex && 'active')} />
                 ))}
               </div>
-              <span className="home-steam one" />
-              <span className="home-steam two" />
-              <span className="home-steam three" />
             </div>
           </div>
 
