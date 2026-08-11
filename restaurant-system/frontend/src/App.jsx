@@ -44,7 +44,7 @@ import { clearSession, getSessionUser, requiresRole, setSession } from './lib/se
 const APP_NAME = 'IRMS';
 const BRAND_ICON = `${import.meta.env.BASE_URL}brand/irms-sidebar-icon.png`;
 const BRAND_LOGO = `${import.meta.env.BASE_URL}brand/irms-selected-logo-source.png`;
-const APP_BASE_PATH = (import.meta.env.VITE_APP_BASE_PATH || '/frontend').replace(/\/+$/, '') || '/';
+const APP_BASE_PATH = (import.meta.env.VITE_APP_BASE_PATH || '/').replace(/\/+$/, '') || '/';
 const QR_CONTEXT_KEY = 'irms_qr_context';
 const ORDER_HISTORY_KEY = 'irms_order_history';
 const HOME_SLIDES = [
