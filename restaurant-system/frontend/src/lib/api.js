@@ -14,17 +14,19 @@ function joinApiPath(path) {
   return `${API_BASE}${normalizedPath}`;
 }
 
-function authHeaders(extra = {}) {
-  const headers = { 'Content-Type': 'application/json', ...extra };
+function authHeaders(extra = {}, hasBody = false) {
+  const headers = { ...extra };
+  if (hasBody && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
   const token = localStorage.getItem('rms_token');
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 
 async function requestJson(path, options = {}) {
+  const hasBody = Object.prototype.hasOwnProperty.call(options, 'body');
   const response = await fetch(joinApiPath(path), {
     ...options,
-    headers: authHeaders(options.headers || {})
+    headers: authHeaders(options.headers || {}, hasBody)
   });
   let payload = null;
   try {

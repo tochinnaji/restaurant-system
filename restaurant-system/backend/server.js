@@ -13,10 +13,30 @@ const frontendStaticRoot = fs.existsSync(frontendDist) ? frontendDist : frontend
 const serveFrontend = process.env.SERVE_FRONTEND === 'true';
 
 app.disable('x-powered-by');
+const configuredCorsOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  const normalizedOrigin = origin.replace(/\/+$/, '');
+  if (configuredCorsOrigins.includes('*') || configuredCorsOrigins.includes(normalizedOrigin)) return true;
+  if (/^https:\/\/restaurant-system-pqsv(?:-[a-z0-9-]+)?(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(normalizedOrigin)) {
+    return true;
+  }
+  if (/^https?:\/\/localhost:\d+$/i.test(normalizedOrigin)) return true;
+  return false;
+};
+
 const corsOptions = {
-  origin: true,
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
