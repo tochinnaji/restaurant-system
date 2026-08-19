@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
 
 function joinApiPath(path) {
   const cleanedPath = path.startsWith('/api/') ? path.slice(4) : path;
