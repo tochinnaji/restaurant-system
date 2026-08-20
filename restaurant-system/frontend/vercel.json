@@ -1,15 +1,12 @@
 {
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "https://restaurant-system-production-b61f.up.railway.app/api/$1"
+      "source": "/api/:path*",
+      "destination": "https://restaurant-system-production-b61f.up.railway.app/api/:path*"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }
