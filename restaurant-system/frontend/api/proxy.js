@@ -1,11 +1,7 @@
 const DEFAULT_BACKEND_API_BASE = 'https://restaurant-system-production-b61f.up.railway.app/api';
 
-function getBackendUrl(req) {
-  const base = (process.env.BACKEND_API_BASE_URL || DEFAULT_BACKEND_API_BASE).replace(/\/+$/, '');
-  const path = Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path || '';
-  const url = new URL(`${base}/${path}`);
-
-  Object.entries(req.query || {}).forEach(([key, value]) => {
+function appendQueryParams(url, query) {
+  Object.entries(query || {}).forEach(([key, value]) => {
     if (key === 'path') return;
     if (Array.isArray(value)) {
       value.forEach((item) => url.searchParams.append(key, item));
@@ -13,7 +9,14 @@ function getBackendUrl(req) {
     }
     if (value !== undefined) url.searchParams.set(key, value);
   });
+}
 
+function getBackendUrl(req) {
+  const base = (process.env.BACKEND_API_BASE_URL || DEFAULT_BACKEND_API_BASE).replace(/\/+$/, '');
+  const pathValue = req.query.path || '';
+  const path = Array.isArray(pathValue) ? pathValue.join('/') : pathValue;
+  const url = new URL(`${base}/${String(path).replace(/^\/+/, '')}`);
+  appendQueryParams(url, req.query);
   return url;
 }
 
