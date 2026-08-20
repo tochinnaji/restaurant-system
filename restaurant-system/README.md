@@ -35,7 +35,7 @@ restaurant-system/
 1. `cd restaurant-system/backend`
 2. Run `npm install`
 3. Copy `.env.example` to `.env` and set your MySQL, JWT, Paystack, and base URL values.
-4. For a Vercel frontend build, set `VITE_API_BASE_URL` to your Railway backend URL and `VITE_APP_BASE_PATH` to `/`.
+4. For a Vercel frontend build, set `VITE_API_BASE_URL` to `/api`, `VITE_APP_BASE_PATH` to `/`, and `BACKEND_API_BASE_URL` to your Railway backend URL.
 5. `cd ../frontend`
 6. Run `npm install`
 7. Import `database/schema.sql` into MySQL.
@@ -119,7 +119,7 @@ These are React routes served under `/frontend`:
 ## Deployment Notes
 
 - `BASE_URL` or `PUBLIC_BASE_URL` should be set to the public host used by the QR links.
-- If you deploy the frontend to Vercel, set the project root to `restaurant-system/frontend`, then add `VITE_API_BASE_URL` and `VITE_APP_BASE_PATH` in Vercel environment variables. Keep the backend on Railway as API-only by leaving `SERVE_FRONTEND` unset or set to `false`.
+- If you deploy the frontend to Vercel, set the project root to `restaurant-system/frontend`, then add `VITE_API_BASE_URL=/api`, `VITE_APP_BASE_PATH=/`, and `BACKEND_API_BASE_URL=https://your-railway-backend-url/api` in Vercel environment variables. Keep the backend on Railway as API-only by leaving `SERVE_FRONTEND` unset or set to `false`.
 - Pushing to GitHub only triggers Vercel if the Vercel project is actually linked to this repo and auto-deploys are enabled.
 
 ## QR Links

@@ -1,5 +1,3 @@
-const DEFAULT_BACKEND_API_BASE = 'https://restaurant-system-production-b61f.up.railway.app/api';
-
 function appendQueryParams(url, query) {
   Object.entries(query || {}).forEach(([key, value]) => {
     if (key === 'path') return;
@@ -12,7 +10,14 @@ function appendQueryParams(url, query) {
 }
 
 function getBackendUrl(req) {
-  const base = (process.env.BACKEND_API_BASE_URL || DEFAULT_BACKEND_API_BASE).replace(/\/+$/, '');
+  const configuredBase = process.env.BACKEND_API_BASE_URL || process.env.VITE_API_BACKEND_URL;
+  if (!configuredBase) {
+    throw new Error('Missing BACKEND_API_BASE_URL');
+  }
+
+  const base = configuredBase.replace(/\/+$/, '').endsWith('/api')
+    ? configuredBase.replace(/\/+$/, '')
+    : `${configuredBase.replace(/\/+$/, '')}/api`;
   const pathValue = req.query.path || '';
   const path = Array.isArray(pathValue) ? pathValue.join('/') : pathValue;
   const url = new URL(`${base}/${String(path).replace(/^\/+/, '')}`);
@@ -50,7 +55,9 @@ export default async function handler(req, res) {
   } catch (err) {
     res.status(502).json({
       success: false,
-      message: 'Backend proxy failed.'
+      message: err.message === 'Missing BACKEND_API_BASE_URL'
+        ? 'Backend API URL is not configured.'
+        : 'Backend proxy failed.'
     });
   }
 }
