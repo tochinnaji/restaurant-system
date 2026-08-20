@@ -15,9 +15,11 @@ function getBackendUrl(req) {
     throw new Error('Missing BACKEND_API_BASE_URL');
   }
 
-  const base = configuredBase.replace(/\/+$/, '').endsWith('/api')
-    ? configuredBase.replace(/\/+$/, '')
-    : `${configuredBase.replace(/\/+$/, '')}/api`;
+  const withProtocol = /^https?:\/\//i.test(configuredBase)
+    ? configuredBase
+    : `https://${configuredBase}`;
+  const cleanedBase = withProtocol.replace(/\/+$/, '');
+  const base = cleanedBase.endsWith('/api') ? cleanedBase : `${cleanedBase}/api`;
   const pathValue = req.query.path || '';
   const path = Array.isArray(pathValue) ? pathValue.join('/') : pathValue;
   const url = new URL(`${base}/${String(path).replace(/^\/+/, '')}`);
@@ -40,8 +42,10 @@ function getForwardBody(req) {
 }
 
 export default async function handler(req, res) {
+  let targetUrl;
   try {
-    const backendResponse = await fetch(getBackendUrl(req), {
+    targetUrl = getBackendUrl(req);
+    const backendResponse = await fetch(targetUrl, {
       method: req.method,
       headers: getForwardHeaders(req),
       body: getForwardBody(req)
@@ -57,7 +61,9 @@ export default async function handler(req, res) {
       success: false,
       message: err.message === 'Missing BACKEND_API_BASE_URL'
         ? 'Backend API URL is not configured.'
-        : 'Backend proxy failed.'
+        : 'Backend proxy failed.',
+      detail: err.message,
+      target: targetUrl ? targetUrl.origin : null
     });
   }
 }
