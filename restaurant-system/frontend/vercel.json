@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://restaurant-system-production-b61f.up.railway.app/api/:path*"
-    },
-    {
       "source": "/:path*",
       "destination": "/index.html"
     }
