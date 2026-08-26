@@ -919,6 +919,7 @@ function CustomerPage() {
   const progressText = statusTrackingText[activeOrderStatus] || timeLeftText;
   const canAddToCurrentOrder = activeOrderId && ['pending'].includes(activeOrderStatus) && ['unpaid', 'pending'].includes(activeOrder?.payment_status || 'unpaid');
   const paymentStatus = activeOrder?.payment_status || 'unpaid';
+  const canRetryPayment = activeOrderId && ['unpaid', 'pending', 'failed'].includes(paymentStatus) && activeOrderStatus !== 'cancelled';
   const paymentNotice = {
     paid: { title: 'Payment successful', body: 'Payment confirmed. Your receipt is ready below.', tone: 'paid' },
     pending: { title: 'Payment pending', body: 'Payment is still being confirmed. Keep this page open or refresh tracking.', tone: 'pending' },
@@ -1285,7 +1286,7 @@ function CustomerPage() {
               <span>Total</span>
               <strong>{formatNaira(activeOrder.total_amount)}</strong>
             </div>
-            {['unpaid', 'pending'].includes(activeOrder.payment_status) && activeOrder.order_status !== 'cancelled' ? (
+            {canRetryPayment ? (
               <div className="page-actions">
                 <button type="button" className="btn btn-primary" onClick={() => { setShowTracking(false); setShowPayment(true); }}>
                   <Wallet size={16} />
