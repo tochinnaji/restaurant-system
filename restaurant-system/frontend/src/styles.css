@@ -1757,6 +1757,32 @@ body {
     border-color: rgba(214, 90, 0, 0.18);
   }
 
+  .customer-page .menu-card-head .menu-status-badge.badge-success {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.52);
+    color: #baf7d2;
+    font-weight: 800;
+  }
+
+  .customer-page .menu-card-head .menu-status-badge.badge-danger {
+    background: rgba(239, 68, 68, 0.24);
+    border-color: rgba(239, 68, 68, 0.58);
+    color: #ffd6d2;
+    font-weight: 800;
+  }
+
+  [data-theme="light"] .customer-page .menu-card-head .menu-status-badge.badge-success {
+    background: rgba(34, 197, 94, 0.18);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #047857;
+  }
+
+  [data-theme="light"] .customer-page .menu-card-head .menu-status-badge.badge-danger {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #b91c1c;
+  }
+
   .customer-page .menu-card h3 {
     min-height: 38px;
     margin: 0 0 6px;

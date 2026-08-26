@@ -1134,8 +1134,8 @@ function CustomerPage() {
                   <div className="menu-card-icon">
                     <ChefHat size={18} />
                   </div>
-                  <span className={badgeClass(item.availability_status)}>
-                    {item.availability_status === 'out_of_stock' ? 'out of stock' : item.availability_status}
+                  <span className={`${badgeClass(item.availability_status)} menu-status-badge`}>
+                    {item.availability_status === 'out_of_stock' || item.availability_status === 'unavailable' ? 'out of stock' : item.availability_status}
                   </span>
                 </div>
                 <h3>{item.item_name}</h3>

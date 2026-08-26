@@ -33,6 +33,7 @@ export function badgeClass(status) {
     unpaid: 'badge badge-warning',
     failed: 'badge badge-danger',
     successful: 'badge badge-success',
+    unavailable: 'badge badge-danger',
     low: 'badge badge-warning',
     out_of_stock: 'badge badge-danger',
     unread: 'badge badge-warning',
