@@ -1774,7 +1774,8 @@ body {
   [data-theme="light"] .customer-page .menu-card-head .menu-status-badge.badge-success {
     background: rgba(34, 197, 94, 0.18);
     border-color: rgba(34, 197, 94, 0.5);
-    color: #047857;
+    color: #064e3b;
+    font-weight: 700;
   }
 
   [data-theme="light"] .customer-page .menu-card-head .menu-status-badge.badge-danger {
