@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const https = require('https');
-const { getBackendPublicUrl, getFrontendPublicUrl } = require('../utils/publicUrl');
+const { getFrontendPublicUrl } = require('../utils/publicUrl');
 
 const safeJsonParse = (data) => {
   try {
@@ -11,6 +11,96 @@ const safeJsonParse = (data) => {
 };
 
 const PAYMENT_GATEWAY_TIMEOUT_MS = 25000;
+
+const requestPaystackVerify = (reference, paystackSecretKey) => new Promise((resolve, reject) => {
+  const options = {
+    hostname: 'api.paystack.co',
+    port: 443,
+    path: `/transaction/verify/${encodeURIComponent(reference)}`,
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${paystackSecretKey}`
+    }
+  };
+
+  const paystackReq = https.request(options, (paystackRes) => {
+    let data = '';
+    paystackRes.on('data', (chunk) => { data += chunk; });
+    paystackRes.on('end', () => {
+      const response = safeJsonParse(data);
+      if (!response || !response.status || response.data?.status !== 'success') {
+        const error = new Error(response?.message || 'Payment could not be verified.');
+        error.statusCode = paystackRes.statusCode || 400;
+        error.gatewayResponse = response;
+        reject(error);
+        return;
+      }
+      resolve(response.data);
+    });
+  });
+
+  paystackReq.on('error', reject);
+  paystackReq.setTimeout(PAYMENT_GATEWAY_TIMEOUT_MS, () => {
+    paystackReq.destroy(new Error('Payment provider request timed out.'));
+  });
+  paystackReq.end();
+});
+
+const markPaymentSuccessful = async (paymentData) => {
+  const { reference: ref, paid_at, channel, metadata = {} } = paymentData;
+  const [paymentRows] = await db.query('SELECT order_id FROM payments WHERE payment_reference = ? LIMIT 1', [ref]);
+  const orderId = metadata.order_id || paymentRows[0]?.order_id;
+
+  if (!orderId) {
+    const error = new Error('Payment verified but order could not be resolved.');
+    error.statusCode = 409;
+    error.context = { reference: ref, metadata };
+    throw error;
+  }
+
+  const [orderRows] = await db.query('SELECT table_number FROM orders WHERE order_id = ? LIMIT 1', [orderId]);
+  const tableNumber = metadata.table_number || orderRows[0]?.table_number;
+  let tableToken = metadata.table_token;
+
+  if (!tableToken && tableNumber) {
+    const [tables] = await db.query(
+      'SELECT qr_token FROM restaurant_tables WHERE table_number = ? AND is_active = TRUE ORDER BY table_id DESC LIMIT 1',
+      [tableNumber]
+    );
+    tableToken = tables[0]?.qr_token;
+  }
+
+  const paidAt = paid_at ? new Date(paid_at) : new Date();
+  const [paymentUpdate] = await db.query(
+    `UPDATE payments
+     SET payment_reference = ?, payment_status = 'successful', payment_method = ?, paid_at = ?
+     WHERE payment_reference = ? OR order_id = ?`,
+    [ref, channel || null, paidAt, ref, orderId]
+  );
+
+  if (paymentUpdate.affectedRows === 0) {
+    await db.query(
+      `INSERT INTO payments (order_id, payment_reference, amount, payment_status, payment_method, paid_at)
+       SELECT order_id, ?, total_amount, 'successful', ?, ? FROM orders WHERE order_id = ?
+       ON DUPLICATE KEY UPDATE
+         payment_reference = VALUES(payment_reference),
+         amount = VALUES(amount),
+         payment_status = 'successful',
+         payment_method = VALUES(payment_method),
+         paid_at = VALUES(paid_at)`,
+      [ref, channel || null, paidAt, orderId]
+    );
+  }
+
+  await db.query('UPDATE orders SET payment_status = "paid" WHERE order_id = ?', [orderId]);
+
+  return {
+    order_id: orderId,
+    table_number: tableNumber,
+    table_token: tableToken,
+    reference: ref
+  };
+};
 
 const requestPaystackRefund = (paymentReference, amount) => new Promise((resolve, reject) => {
   const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
@@ -100,7 +190,7 @@ const initializePayment = async (req, res) => {
       email,
       amount: amountInKobo,
       metadata: { order_id, table_number: order.table_number, table_token: tableToken, frontend_url: frontendUrl },
-      callback_url: `${getBackendPublicUrl(req)}/api/payment/verify`
+      callback_url: `${frontendUrl}/customer/payment-success`
     });
 
     const options = {
@@ -146,7 +236,7 @@ const initializePayment = async (req, res) => {
           console.error('Paystack initialization failed:', {
             statusCode: paystackRes.statusCode,
             message: gatewayMessage,
-            callback_url: `${getBackendPublicUrl(req)}/api/payment/verify`
+            callback_url: `${frontendUrl}/customer/payment-success`
           });
           res.status(400).json({ success: false, message: gatewayMessage, error: gatewayMessage });
         }
@@ -178,93 +268,40 @@ const verifyPayment = async (req, res) => {
     return res.redirect(`${fallbackFrontendUrl}/customer/payment-failed`);
   }
 
-  const options = {
-    hostname: 'api.paystack.co',
-    port: 443,
-    path: `/transaction/verify/${encodeURIComponent(reference)}`,
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${paystackSecretKey}`
-    }
-  };
-
-  const paystackReq = https.request(options, (paystackRes) => {
-    let data = '';
-    paystackRes.on('data', (chunk) => { data += chunk; });
-    paystackRes.on('end', async () => {
-      try {
-        const response = safeJsonParse(data);
-        const metadata = response?.data?.metadata || {};
-        const frontendUrl = metadata.frontend_url || fallbackFrontendUrl;
-        if (!response || !response.status || response.data?.status !== 'success') {
-          return res.redirect(`${frontendUrl}/customer/payment-failed`);
-        }
-
-        const { reference: ref, paid_at, channel } = response.data;
-        const [paymentRows] = await db.query('SELECT order_id FROM payments WHERE payment_reference = ? LIMIT 1', [ref]);
-        const orderId = metadata.order_id || paymentRows[0]?.order_id;
-
-        if (!orderId) {
-          console.error('Payment verified but order could not be resolved:', { reference: ref, metadata });
-          return res.redirect(`${frontendUrl}/customer/payment-failed`);
-        }
-
-        const [orderRows] = await db.query('SELECT table_number FROM orders WHERE order_id = ? LIMIT 1', [orderId]);
-        const tableNumber = metadata.table_number || orderRows[0]?.table_number;
-        let tableToken = metadata.table_token;
-
-        if (!tableToken && tableNumber) {
-          const [tables] = await db.query(
-            'SELECT qr_token FROM restaurant_tables WHERE table_number = ? AND is_active = TRUE ORDER BY table_id DESC LIMIT 1',
-            [tableNumber]
-          );
-          tableToken = tables[0]?.qr_token;
-        }
-
-        const paidAt = paid_at ? new Date(paid_at) : new Date();
-        const [paymentUpdate] = await db.query(
-          `UPDATE payments
-           SET payment_reference = ?, payment_status = 'successful', payment_method = ?, paid_at = ?
-           WHERE payment_reference = ? OR order_id = ?`,
-          [ref, channel || null, paidAt, ref, orderId]
-        );
-        if (paymentUpdate.affectedRows === 0) {
-          await db.query(
-            `INSERT INTO payments (order_id, payment_reference, amount, payment_status, payment_method, paid_at)
-             SELECT order_id, ?, total_amount, 'successful', ?, ? FROM orders WHERE order_id = ?
-             ON DUPLICATE KEY UPDATE
-               payment_reference = VALUES(payment_reference),
-               amount = VALUES(amount),
-               payment_status = 'successful',
-               payment_method = VALUES(payment_method),
-               paid_at = VALUES(paid_at)`,
-            [ref, channel || null, paidAt, orderId]
-          );
-        }
-
-        await db.query('UPDATE orders SET payment_status = "paid" WHERE order_id = ?', [orderId]);
-
-        const query = new URLSearchParams();
-        query.set('order_id', orderId);
-        if (tableNumber) query.set('table', tableNumber);
-        if (tableToken) query.set('token', tableToken);
-        return res.redirect(`${frontendUrl}/customer/payment-success?${query.toString()}`);
-      } catch (err) {
-        console.error('Verify payment processing error:', err);
-        return res.redirect(`${fallbackFrontendUrl}/customer/payment-failed`);
-      }
-    });
-  });
-
-  paystackReq.on('error', (err) => {
-    console.error('Paystack verify error:', err);
+  try {
+    const paymentData = await requestPaystackVerify(reference, paystackSecretKey);
+    const result = await markPaymentSuccessful(paymentData);
+    const frontendUrl = paymentData.metadata?.frontend_url || fallbackFrontendUrl;
+    const query = new URLSearchParams();
+    query.set('order_id', result.order_id);
+    if (result.table_number) query.set('table', result.table_number);
+    if (result.table_token) query.set('token', result.table_token);
+    return res.redirect(`${frontendUrl}/customer/payment-success?${query.toString()}`);
+  } catch (err) {
+    console.error('Paystack verify error:', err.context || err);
     return res.redirect(`${fallbackFrontendUrl}/customer/payment-failed`);
-  });
+  }
+};
 
-  paystackReq.setTimeout(PAYMENT_GATEWAY_TIMEOUT_MS, () => {
-    paystackReq.destroy(new Error('Payment provider request timed out.'));
-  });
-  paystackReq.end();
+const confirmPayment = async (req, res) => {
+  const { reference } = req.query;
+  const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
+
+  if (!reference) {
+    return res.status(400).json({ success: false, message: 'Payment reference is required.' });
+  }
+  if (!paystackSecretKey || paystackSecretKey.includes('your_paystack_secret_key')) {
+    return res.status(500).json({ success: false, message: 'Paystack secret key is not configured on the server.' });
+  }
+
+  try {
+    const paymentData = await requestPaystackVerify(reference, paystackSecretKey);
+    const result = await markPaymentSuccessful(paymentData);
+    res.json({ success: true, message: 'Payment confirmed.', data: result });
+  } catch (err) {
+    console.error('Confirm payment error:', err.context || err);
+    res.status(err.statusCode || 502).json({ success: false, message: err.message || 'Payment could not be verified.' });
+  }
 };
 
 
@@ -315,4 +352,4 @@ const reversePayment = async (req, res) => {
     res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Server error.' });
   }
 };
-module.exports = { initializePayment, verifyPayment, reversePayment };
+module.exports = { initializePayment, verifyPayment, confirmPayment, reversePayment };

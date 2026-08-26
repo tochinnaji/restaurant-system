@@ -81,7 +81,12 @@ function readStoredQrContext() {
 function saveQrContext(tableNumber, token) {
   if (typeof window === 'undefined' || !tableNumber || !token) return;
   const current = readStoredQrContext() || {};
-  window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify({ ...current, tableNumber, token }));
+  const tableChanged = current.tableNumber && current.tableNumber !== tableNumber;
+  window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify({
+    ...(tableChanged ? {} : current),
+    tableNumber,
+    token
+  }));
 }
 
 function saveOrderContext(orderId, tableNumber, token) {
@@ -566,7 +571,7 @@ function CustomerPage() {
   const [menu, setMenu] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [cart, setCart] = useState([]);
-  const [activeOrderId, setActiveOrderId] = useState(searchParams.get('order_id') || storedQrContext?.orderId || '');
+  const [activeOrderId, setActiveOrderId] = useState(searchParams.get('order_id') || (storedQrContext?.tableNumber === tableNumber ? storedQrContext?.orderId : '') || '');
   const [activeOrder, setActiveOrder] = useState(null);
   const [orderMessages, setOrderMessages] = useState([]);
   const [showCart, setShowCart] = useState(false);
@@ -1304,12 +1309,15 @@ function CustomerPage() {
 
 function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
+  const [verificationState, setVerificationState] = useState({ status: 'checking', message: 'Confirming payment...' });
   const orderId = searchParams.get('order_id');
+  const reference = searchParams.get('reference') || searchParams.get('trxref');
   const storedQrContext = readStoredQrContext();
   const table = searchParams.get('table') || storedQrContext?.tableNumber;
   const token = searchParams.get('token') || storedQrContext?.token;
-  const trackUrl = appPath(`/customer?table=${encodeURIComponent(table || 'T1')}&token=${encodeURIComponent(token || '')}&order_id=${encodeURIComponent(orderId || '')}`);
-  const menuUrl = appPath(`/customer?table=${encodeURIComponent(table || 'T1')}&token=${encodeURIComponent(token || '')}`);
+  const [returnContext, setReturnContext] = useState({ orderId, table, token });
+  const trackUrl = appPath(`/customer?table=${encodeURIComponent(returnContext.table || 'T1')}&token=${encodeURIComponent(returnContext.token || '')}&order_id=${encodeURIComponent(returnContext.orderId || '')}`);
+  const menuUrl = appPath(`/customer?table=${encodeURIComponent(returnContext.table || 'T1')}&token=${encodeURIComponent(returnContext.token || '')}`);
 
   useEffect(() => {
     if (orderId) {
@@ -1317,16 +1325,51 @@ function PaymentSuccessPage() {
     }
   }, [orderId, table, token]);
 
+  useEffect(() => {
+    if (!reference) {
+      setVerificationState({ status: 'done', message: 'Payment confirmed. Your order is now in progress.' });
+      return;
+    }
+    let cancelled = false;
+    api.get(`/payment/confirm?reference=${encodeURIComponent(reference)}`).then((res) => {
+      if (cancelled) return;
+      if (res.success) {
+        const confirmedOrderId = res.data?.order_id || orderId;
+        const confirmedTable = res.data?.table_number || table;
+        const confirmedToken = res.data?.table_token || token;
+        if (confirmedOrderId) {
+          saveOrderContext(confirmedOrderId, confirmedTable, confirmedToken);
+          saveOrderHistoryEntry(confirmedTable, {
+            order_id: confirmedOrderId,
+            table_number: confirmedTable,
+            order_status: 'pending',
+            payment_status: 'paid'
+          });
+        }
+        setReturnContext({ orderId: confirmedOrderId, table: confirmedTable, token: confirmedToken });
+        setVerificationState({ status: 'done', message: 'Payment confirmed. Your order is now in progress.' });
+        return;
+      }
+      setVerificationState({ status: 'failed', message: res.message || 'Payment could not be confirmed yet.' });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [reference, orderId, table, token]);
+
   return (
     <div className="status-page success">
       <div className="status-card">
         <div className="status-icon success"><Sparkles size={24} /></div>
         <h1>Payment confirmed</h1>
-        <p>Payment confirmed. Your order is now in progress.</p>
+        <p>{verificationState.message}</p>
         <div className="stack">
-          <div className="summary-row"><span>Order</span><strong>#{orderId || '-'}</strong></div>
-          <div className="summary-row"><span>Table</span><strong>{table || '-'}</strong></div>
+          <div className="summary-row"><span>Order</span><strong>#{returnContext.orderId || '-'}</strong></div>
+          <div className="summary-row"><span>Table</span><strong>{returnContext.table || '-'}</strong></div>
         </div>
+        {verificationState.status === 'failed' ? (
+          <div className="notice notice-danger compact-notice">Use Track order to refresh your order. If Paystack charged you, the payment reference can still be verified.</div>
+        ) : null}
         <div className="page-actions">
           <a className="btn btn-primary" href={trackUrl}>
             <Eye size={16} />
