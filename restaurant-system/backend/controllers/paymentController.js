@@ -340,7 +340,7 @@ const reversePayment = async (req, res) => {
       [order_id]
     );
 
-    await db.query('UPDATE orders SET payment_status = "unpaid" WHERE order_id = ?', [order_id]);
+    await db.query('UPDATE orders SET payment_status = "failed" WHERE order_id = ?', [order_id]);
 
     res.json({
       success: true,

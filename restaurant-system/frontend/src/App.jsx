@@ -592,6 +592,7 @@ function CustomerPage() {
   const [now, setNow] = useState(Date.now());
   const lastOrderStatusRef = useRef(null);
   const lastPaymentStatusRef = useRef(null);
+  const lastKitchenResponseRef = useRef('');
   const readyNoticeShownRef = useRef(false);
 
   const menuSectionRef = useRef(null);
@@ -917,19 +918,30 @@ function CustomerPage() {
   };
   const progressText = statusTrackingText[activeOrderStatus] || timeLeftText;
   const canAddToCurrentOrder = activeOrderId && ['pending'].includes(activeOrderStatus) && ['unpaid', 'pending'].includes(activeOrder?.payment_status || 'unpaid');
+  const paymentStatus = activeOrder?.payment_status || 'unpaid';
+  const paymentNotice = {
+    paid: { title: 'Payment successful', body: 'Payment confirmed. Your receipt is ready below.', tone: 'paid' },
+    pending: { title: 'Payment pending', body: 'Payment is still being confirmed. Keep this page open or refresh tracking.', tone: 'pending' },
+    failed: { title: 'Payment unsuccessful or reversed', body: 'This payment was not completed or it has been reversed by the restaurant.', tone: 'failed' },
+    unpaid: { title: 'Payment not completed', body: 'Payment has not been completed yet. You can pay from Track order.', tone: 'pending' }
+  }[paymentStatus] || { title: 'Payment status', body: `Payment is ${paymentStatus}.`, tone: paymentStatus };
+  const kitchenResponses = orderMessages.filter((message) => message.response);
   const notificationItems = useMemo(() => {
     if (!activeOrderId) {
       return [{ title: 'No active order yet', body: 'Place an order and this bell will show kitchen, payment, and receipt updates.', tone: 'muted' }];
     }
     const items = [
       { title: `Order #${activeOrderId}`, body: progressText, tone: activeOrderStatus },
-      { title: 'Payment status', body: activeOrder?.payment_status === 'paid' ? 'Payment successful. Receipt is ready below.' : `Payment is ${activeOrder?.payment_status || 'unpaid'}.`, tone: activeOrder?.payment_status === 'paid' ? 'paid' : 'pending' }
+      paymentNotice
     ];
     if (activeOrderStatus === 'ready') items.unshift({ title: 'Ready for pickup', body: 'Your order is ready. Please meet the kitchen or service desk.', tone: 'ready' });
     if (activeOrderStatus === 'delivered') items.unshift({ title: 'Delivered', body: 'This order has been marked delivered. Thank you for dining with us.', tone: 'delivered' });
     if (activeOrderStatus === 'pending') items.push({ title: 'Kitchen queue', body: 'Your request is pending and will be accepted by the kitchen.', tone: 'pending' });
+    kitchenResponses.slice(-2).forEach((message) => {
+      items.push({ title: 'Kitchen replied', body: message.response, tone: 'responded' });
+    });
     return items;
-  }, [activeOrder, activeOrderId, activeOrderStatus, progressText]);
+  }, [activeOrderId, activeOrderStatus, kitchenResponses, paymentNotice, progressText]);
 
   useEffect(() => {
     if (!activeOrder) return;
@@ -939,7 +951,14 @@ function CustomerPage() {
     if (lastPaymentStatusRef.current && lastPaymentStatusRef.current !== payment && payment === 'paid') {
       pushToast('success', 'Payment confirmed. Order in progress.');
     }
+    if (lastPaymentStatusRef.current && lastPaymentStatusRef.current !== payment && payment === 'pending') {
+      pushToast('warning', 'Payment is pending confirmation.');
+    }
+    if (lastPaymentStatusRef.current && lastPaymentStatusRef.current !== payment && payment === 'failed') {
+      pushToast('danger', 'Payment was unsuccessful or reversed.');
+    }
     if (lastOrderStatusRef.current && lastOrderStatusRef.current !== status) {
+      if (status === 'pending') pushToast('warning', 'Order is pending in the kitchen queue.');
       if (status === 'preparing') pushToast('success', 'Order in progress.');
       if (status === 'ready') pushToast('success', 'Order is ready.');
       if (status === 'delivered') pushToast('success', 'Order delivered.');
@@ -953,6 +972,18 @@ function CustomerPage() {
     lastOrderStatusRef.current = status;
     lastPaymentStatusRef.current = payment;
   }, [activeOrder, remainingMinutes, pushToast]);
+
+  useEffect(() => {
+    if (!activeOrderId) return;
+    const responseSignature = orderMessages
+      .filter((message) => message.response)
+      .map((message) => `${message.message_id}:${message.response}`)
+      .join('|');
+    if (lastKitchenResponseRef.current && responseSignature && lastKitchenResponseRef.current !== responseSignature) {
+      pushToast('success', 'Kitchen replied to your message.');
+    }
+    lastKitchenResponseRef.current = responseSignature;
+  }, [activeOrderId, orderMessages, pushToast]);
 
   return (
     <div className="customer-page">
