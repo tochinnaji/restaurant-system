@@ -45,6 +45,11 @@ const getBackendPublicUrl = (req) => {
 
 
 const getFrontendPublicUrl = (req) => {
+  const forwardedFrontend = normalizeBaseUrl(req?.headers?.['x-irms-frontend-origin']);
+  if (forwardedFrontend) {
+    return forwardedFrontend;
+  }
+
   const configured = normalizeBaseUrl(
     process.env.FRONTEND_PUBLIC_URL ||
     process.env.PUBLIC_FRONTEND_URL

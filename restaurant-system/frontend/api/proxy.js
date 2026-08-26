@@ -32,7 +32,25 @@ function getForwardHeaders(req) {
   ['content-type', 'authorization'].forEach((key) => {
     if (req.headers[key]) headers[key] = req.headers[key];
   });
+  const frontendOrigin = req.headers.origin || getOriginFromReferer(req.headers.referer) || getOriginFromHost(req);
+  if (frontendOrigin) headers['x-irms-frontend-origin'] = frontendOrigin;
   return headers;
+}
+
+function getOriginFromReferer(referer) {
+  if (!referer) return '';
+  try {
+    return new URL(referer).origin;
+  } catch (err) {
+    return '';
+  }
+}
+
+function getOriginFromHost(req) {
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  if (!host) return '';
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  return `${proto}://${host}`;
 }
 
 function getForwardBody(req) {

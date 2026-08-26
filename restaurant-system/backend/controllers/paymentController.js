@@ -86,6 +86,7 @@ const initializePayment = async (req, res) => {
     if (order.payment_status === 'paid') {
       return res.status(400).json({ success: false, message: 'Order already paid.' });
     }
+    const frontendUrl = getFrontendPublicUrl(req);
 
     const [tables] = await db.query(
       'SELECT qr_token FROM restaurant_tables WHERE table_number = ? AND is_active = TRUE ORDER BY table_id DESC LIMIT 1',
@@ -98,7 +99,7 @@ const initializePayment = async (req, res) => {
     const params = JSON.stringify({
       email,
       amount: amountInKobo,
-      metadata: { order_id, table_number: order.table_number, table_token: tableToken },
+      metadata: { order_id, table_number: order.table_number, table_token: tableToken, frontend_url: frontendUrl },
       callback_url: `${getBackendPublicUrl(req)}/api/payment/verify`
     });
 
@@ -171,10 +172,10 @@ const initializePayment = async (req, res) => {
 const verifyPayment = async (req, res) => {
   const { reference } = req.query;
   const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
-  const frontendUrl = getFrontendPublicUrl(req);
+  const fallbackFrontendUrl = getFrontendPublicUrl(req);
 
   if (!reference) {
-    return res.redirect(`${frontendUrl}/customer/payment-failed`);
+    return res.redirect(`${fallbackFrontendUrl}/customer/payment-failed`);
   }
 
   const options = {
@@ -193,11 +194,13 @@ const verifyPayment = async (req, res) => {
     paystackRes.on('end', async () => {
       try {
         const response = safeJsonParse(data);
+        const metadata = response?.data?.metadata || {};
+        const frontendUrl = metadata.frontend_url || fallbackFrontendUrl;
         if (!response || !response.status || response.data?.status !== 'success') {
           return res.redirect(`${frontendUrl}/customer/payment-failed`);
         }
 
-        const { reference: ref, paid_at, channel, metadata = {} } = response.data;
+        const { reference: ref, paid_at, channel } = response.data;
         const [paymentRows] = await db.query('SELECT order_id FROM payments WHERE payment_reference = ? LIMIT 1', [ref]);
         const orderId = metadata.order_id || paymentRows[0]?.order_id;
 
@@ -218,12 +221,26 @@ const verifyPayment = async (req, res) => {
           tableToken = tables[0]?.qr_token;
         }
 
-        await db.query(
+        const paidAt = paid_at ? new Date(paid_at) : new Date();
+        const [paymentUpdate] = await db.query(
           `UPDATE payments
-           SET payment_status = 'successful', payment_method = ?, paid_at = ?
-           WHERE payment_reference = ?`,
-          [channel || null, paid_at ? new Date(paid_at) : new Date(), ref]
+           SET payment_reference = ?, payment_status = 'successful', payment_method = ?, paid_at = ?
+           WHERE payment_reference = ? OR order_id = ?`,
+          [ref, channel || null, paidAt, ref, orderId]
         );
+        if (paymentUpdate.affectedRows === 0) {
+          await db.query(
+            `INSERT INTO payments (order_id, payment_reference, amount, payment_status, payment_method, paid_at)
+             SELECT order_id, ?, total_amount, 'successful', ?, ? FROM orders WHERE order_id = ?
+             ON DUPLICATE KEY UPDATE
+               payment_reference = VALUES(payment_reference),
+               amount = VALUES(amount),
+               payment_status = 'successful',
+               payment_method = VALUES(payment_method),
+               paid_at = VALUES(paid_at)`,
+            [ref, channel || null, paidAt, orderId]
+          );
+        }
 
         await db.query('UPDATE orders SET payment_status = "paid" WHERE order_id = ?', [orderId]);
 
@@ -234,14 +251,14 @@ const verifyPayment = async (req, res) => {
         return res.redirect(`${frontendUrl}/customer/payment-success?${query.toString()}`);
       } catch (err) {
         console.error('Verify payment processing error:', err);
-        return res.redirect(`${frontendUrl}/customer/payment-failed`);
+        return res.redirect(`${fallbackFrontendUrl}/customer/payment-failed`);
       }
     });
   });
 
   paystackReq.on('error', (err) => {
     console.error('Paystack verify error:', err);
-    return res.redirect(`${frontendUrl}/customer/payment-failed`);
+    return res.redirect(`${fallbackFrontendUrl}/customer/payment-failed`);
   });
 
   paystackReq.setTimeout(PAYMENT_GATEWAY_TIMEOUT_MS, () => {
