@@ -10,6 +10,8 @@ const safeJsonParse = (data) => {
   }
 };
 
+const PAYMENT_GATEWAY_TIMEOUT_MS = 25000;
+
 const requestPaystackRefund = (paymentReference, amount) => new Promise((resolve, reject) => {
   const paystackSecretKey = String(process.env.PAYSTACK_SECRET_KEY || '').trim();
   if (!paystackSecretKey || paystackSecretKey.includes('your_paystack_secret_key')) {
@@ -54,6 +56,9 @@ const requestPaystackRefund = (paymentReference, amount) => new Promise((resolve
   });
 
   refundReq.on('error', reject);
+  refundReq.setTimeout(PAYMENT_GATEWAY_TIMEOUT_MS, () => {
+    refundReq.destroy(new Error('Payment provider request timed out.'));
+  });
   refundReq.write(params);
   refundReq.end();
 });
@@ -149,9 +154,12 @@ const initializePayment = async (req, res) => {
 
     paystackReq.on('error', (err) => {
       console.error('Paystack error:', err);
-      res.status(500).json({ success: false, message: 'Payment gateway error.' });
+      res.status(502).json({ success: false, message: err.message || 'Payment gateway error.' });
     });
 
+    paystackReq.setTimeout(PAYMENT_GATEWAY_TIMEOUT_MS, () => {
+      paystackReq.destroy(new Error('Payment provider request timed out.'));
+    });
     paystackReq.write(params);
     paystackReq.end();
   } catch (err) {
@@ -236,6 +244,9 @@ const verifyPayment = async (req, res) => {
     return res.redirect(`${frontendUrl}/customer/payment-failed`);
   });
 
+  paystackReq.setTimeout(PAYMENT_GATEWAY_TIMEOUT_MS, () => {
+    paystackReq.destroy(new Error('Payment provider request timed out.'));
+  });
   paystackReq.end();
 };
 

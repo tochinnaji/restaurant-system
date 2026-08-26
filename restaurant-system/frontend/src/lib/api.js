@@ -7,6 +7,7 @@ function normalizeApiBase(value) {
 }
 
 const API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE_URL);
+const REQUEST_TIMEOUT_MS = 25000;
 
 function joinApiPath(path) {
   const cleanedPath = path.startsWith('/api/') ? path.slice(4) : path;
@@ -24,20 +25,34 @@ function authHeaders(extra = {}, hasBody = false) {
 
 async function requestJson(path, options = {}) {
   const hasBody = Object.prototype.hasOwnProperty.call(options, 'body');
-  const response = await fetch(joinApiPath(path), {
-    ...options,
-    headers: authHeaders(options.headers || {}, hasBody)
-  });
-  let payload = null;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    payload = await response.json();
+    const response = await fetch(joinApiPath(path), {
+      ...options,
+      signal: controller.signal,
+      headers: authHeaders(options.headers || {}, hasBody)
+    });
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (err) {
+      payload = { success: false, message: 'Invalid server response.' };
+    }
+    if (!response.ok && payload?.success !== false) {
+      return { success: false, message: payload?.message || 'Request failed.' };
+    }
+    return payload;
   } catch (err) {
-    payload = { success: false, message: 'Invalid server response.' };
+    return {
+      success: false,
+      message: err.name === 'AbortError'
+        ? 'Request timed out. Please check your connection and try again.'
+        : 'Could not reach the server. Please try again.'
+    };
+  } finally {
+    window.clearTimeout(timeout);
   }
-  if (!response.ok && payload?.success !== false) {
-    return { success: false, message: payload?.message || 'Request failed.' };
-  }
-  return payload;
 }
 
 export const api = {

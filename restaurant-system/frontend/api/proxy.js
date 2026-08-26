@@ -43,12 +43,15 @@ function getForwardBody(req) {
 
 export default async function handler(req, res) {
   let targetUrl;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     targetUrl = getBackendUrl(req);
     const backendResponse = await fetch(targetUrl, {
       method: req.method,
       headers: getForwardHeaders(req),
-      body: getForwardBody(req)
+      body: getForwardBody(req),
+      signal: controller.signal
     });
 
     const contentType = backendResponse.headers.get('content-type');
@@ -65,5 +68,7 @@ export default async function handler(req, res) {
       detail: err.message,
       target: targetUrl ? targetUrl.origin : null
     });
+  } finally {
+    clearTimeout(timeout);
   }
 }

@@ -579,6 +579,9 @@ function CustomerPage() {
   const [messageText, setMessageText] = useState('');
   const [paymentEmail, setPaymentEmail] = useState('');
   const [loadingOrder, setLoadingOrder] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [orderActionMessage, setOrderActionMessage] = useState('');
+  const [paymentActionMessage, setPaymentActionMessage] = useState('');
   const [refreshingCustomer, setRefreshingCustomer] = useState(false);
   const [orderHistory, setOrderHistory] = useState(() => readOrderHistory()[tableNumber] || []);
   const [now, setNow] = useState(Date.now());
@@ -744,6 +747,7 @@ function CustomerPage() {
     setShowNotifications(true);
   }
   async function submitCart() {
+    setOrderActionMessage('');
     if (canAddToCurrentOrder) {
       await addItemsToCurrentOrder();
       return;
@@ -753,11 +757,15 @@ function CustomerPage() {
 
   async function addItemsToCurrentOrder() {
     if (!qrToken) {
-      pushToast('danger', 'Scan a valid table QR code before adding items.');
+      const message = 'Scan a valid table QR code before adding items.';
+      setOrderActionMessage(message);
+      pushToast('danger', message);
       return;
     }
     if (cart.length === 0) {
-      pushToast('danger', 'Add at least one menu item first.');
+      const message = 'Add at least one menu item first.';
+      setOrderActionMessage(message);
+      pushToast('danger', message);
       return;
     }
     setLoadingOrder(true);
@@ -768,13 +776,16 @@ function CustomerPage() {
         items: cart.map((item) => ({ menu_item_id: item.menu_item_id, quantity: item.quantity }))
       });
       if (!res.success) {
-        pushToast('danger', res.message || 'Could not add items to this order.');
+        const message = res.message || 'Could not add items to this order.';
+        setOrderActionMessage(message);
+        pushToast('danger', message);
         return;
       }
       setActiveOrder(res.data);
       setOrderHistory(saveOrderHistoryEntry(tableNumber, res.data));
       setCart([]);
       setShowCart(false);
+      setOrderActionMessage('');
       pushToast('success', 'Items added to your current order.');
     } finally {
       setLoadingOrder(false);
@@ -783,11 +794,15 @@ function CustomerPage() {
 
   async function placeOrder() {
     if (!qrToken) {
-      pushToast('danger', 'Scan a valid table QR code before placing an order.');
+      const message = 'Scan a valid table QR code before placing an order.';
+      setOrderActionMessage(message);
+      pushToast('danger', message);
       return;
     }
     if (cart.length === 0) {
-      pushToast('danger', 'Add at least one menu item first.');
+      const message = 'Add at least one menu item first.';
+      setOrderActionMessage(message);
+      pushToast('danger', message);
       return;
     }
     setLoadingOrder(true);
@@ -798,7 +813,9 @@ function CustomerPage() {
         items: cart.map((item) => ({ menu_item_id: item.menu_item_id, quantity: item.quantity }))
       });
       if (!res.success) {
-        pushToast('danger', res.message || 'Could not place order.');
+        const message = res.message || 'Could not place order.';
+        setOrderActionMessage(message);
+        pushToast('danger', message);
         return;
       }
       setActiveOrderId(String(res.data.order_id));
@@ -809,6 +826,8 @@ function CustomerPage() {
       setCart([]);
       setShowCart(false);
       setShowPayment(true);
+      setOrderActionMessage('');
+      setPaymentActionMessage('');
       pushToast('success', `Order #${res.data.order_id} has been placed.`);
       pushToast('success', `Estimated wait: ${res.data.estimated_wait_time} min.`);
     } finally {
@@ -849,19 +868,31 @@ function CustomerPage() {
 
   async function initializePayment() {
     if (!activeOrderId) {
-      pushToast('danger', 'Place an order first.');
+      const message = 'Place an order first.';
+      setPaymentActionMessage(message);
+      pushToast('danger', message);
       return;
     }
     if (!paymentEmail.includes('@')) {
-      pushToast('danger', 'Enter a valid email address.');
+      const message = 'Enter a valid email address.';
+      setPaymentActionMessage(message);
+      pushToast('danger', message);
       return;
     }
-    const res = await api.post('/payment/initialize', { order_id: activeOrderId, email: paymentEmail });
-    if (res.success && res.data?.authorization_url) {
-      window.location.href = res.data.authorization_url;
-      return;
+    setPaymentLoading(true);
+    setPaymentActionMessage('');
+    try {
+      const res = await api.post('/payment/initialize', { order_id: activeOrderId, email: paymentEmail });
+      if (res.success && res.data?.authorization_url) {
+        window.location.href = res.data.authorization_url;
+        return;
+      }
+      const message = res.message || res.error || 'Payment could not be started.';
+      setPaymentActionMessage(message);
+      pushToast('danger', message);
+    } finally {
+      setPaymentLoading(false);
     }
-    pushToast('danger', res.message || res.error || 'Payment could not be started.');
   }
 
   const activeOrderStatus = activeOrder?.order_status || 'pending';
@@ -1136,6 +1167,7 @@ function CustomerPage() {
             <strong>Total</strong>
             <strong>{formatNaira(total)}</strong>
           </div>
+          {orderActionMessage ? <div className="notice notice-danger compact-notice">{orderActionMessage}</div> : null}
           <Button icon={Send} onClick={submitCart} disabled={loadingOrder || cart.length === 0}>
             {loadingOrder ? 'Saving order...' : canAddToCurrentOrder ? 'Add to current order' : 'Place order'}
           </Button>
@@ -1156,7 +1188,10 @@ function CustomerPage() {
             <strong>{formatNaira(activeOrder?.total_amount || total)}</strong>
           </div>
           <Input label="Email address" type="email" value={paymentEmail} onChange={(e) => setPaymentEmail(e.target.value)} placeholder="you@example.com" />
-          <Button icon={Wallet} onClick={initializePayment}>Start payment</Button>
+          {paymentActionMessage ? <div className="notice notice-danger compact-notice">{paymentActionMessage}</div> : null}
+          <Button icon={Wallet} onClick={initializePayment} disabled={paymentLoading}>
+            {paymentLoading ? 'Starting payment...' : 'Start payment'}
+          </Button>
         </div>
       </Modal>
 
