@@ -122,6 +122,8 @@ These are React routes served under `/frontend`:
 - If you deploy the frontend to Vercel, set the project root to `restaurant-system/frontend`, then add `VITE_API_BASE_URL=/api`, `VITE_APP_BASE_PATH=/`, and `BACKEND_API_BASE_URL=https://your-railway-backend-url/api` in Vercel environment variables. Keep the backend on Railway as API-only by leaving `SERVE_FRONTEND` unset or set to `false`.
 - Pushing to GitHub only triggers Vercel if the Vercel project is actually linked to this repo and auto-deploys are enabled.
 
+For the full Railway, Vercel, MySQL migration, QR, Paystack, and troubleshooting guide, see [Deployment Runbook](docs/DEPLOYMENT_RUNBOOK.md).
+
 ## QR Links
 
 Customers must open a valid link that contains both the table number and token. The manager QR generator now creates links like:
