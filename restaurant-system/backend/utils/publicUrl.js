@@ -45,17 +45,17 @@ const getBackendPublicUrl = (req) => {
 
 
 const getFrontendPublicUrl = (req) => {
-  const forwardedFrontend = normalizeBaseUrl(req?.headers?.['x-irms-frontend-origin']);
-  if (forwardedFrontend) {
-    return forwardedFrontend;
-  }
-
   const configured = normalizeBaseUrl(
     process.env.FRONTEND_PUBLIC_URL ||
     process.env.PUBLIC_FRONTEND_URL
   );
   if (configured) {
     return configured;
+  }
+
+  const forwardedFrontend = normalizeBaseUrl(req?.headers?.['x-irms-frontend-origin']);
+  if (forwardedFrontend) {
+    return forwardedFrontend;
   }
 
   const vercelUrl = normalizeBaseUrl(process.env.VERCEL_URL);

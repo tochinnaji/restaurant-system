@@ -4,7 +4,7 @@ const { authMiddleware, roleMiddleware } = require('../middleware/auth');
 
 const { login, register, getAllUsers } = require('../controllers/authController');
 const { getAllMenuItems, getMenuByCategory, addMenuItem, updateMenuItem, deleteMenuItem } = require('../controllers/menuController');
-const { placeOrder, addItemsToOrder, getOrderById, getAllOrders, updateOrderStatus, getDashboardSummary } = require('../controllers/orderController');
+const { placeOrder, addItemsToOrder, cancelCustomerOrder, getOrderById, getAllOrders, updateOrderStatus, getDashboardSummary } = require('../controllers/orderController');
 const { initializePayment, verifyPayment, confirmPayment, reversePayment } = require('../controllers/paymentController');
 const { sendMessage, getAllMessages, getOrderMessages, respondToMessage, markMessageRead } = require('../controllers/messageController');
 const { getAllStock, addStockItem, updateStock } = require('../controllers/stockController');
@@ -23,6 +23,7 @@ router.delete('/menu/:id', authMiddleware, roleMiddleware('admin'), deleteMenuIt
 
 router.post('/orders', placeOrder);
 router.post('/orders/:id/items', addItemsToOrder);
+router.post('/orders/:id/cancel', cancelCustomerOrder);
 router.get('/orders/:id', getOrderById);
 router.get('/orders', authMiddleware, roleMiddleware('admin', 'manager', 'staff', 'ceo'), getAllOrders);
 router.put('/orders/:id/status', authMiddleware, roleMiddleware('admin', 'manager', 'staff'), updateOrderStatus);

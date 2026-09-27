@@ -2,6 +2,25 @@ const db = require('../config/db');
 const { estimateWaitTime } = require('../utils/waitTime');
 
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
+const CUSTOMER_CANCELLATION_WINDOW_MS = 10 * 60 * 1000;
+
+const canCancelOrder = (order) => {
+  if (!order || ['cancelled', 'delivered'].includes(order.order_status)) return false;
+  const createdAt = new Date(order.created_at).getTime();
+  return Number.isFinite(createdAt) && Date.now() - createdAt < CUSTOMER_CANCELLATION_WINDOW_MS;
+};
+
+const verifyOrderAccess = async (conn, order, { table_number, token, customer_token }) => {
+  if (order.table_number === 'ONLINE') {
+    return Boolean(customer_token && order.customer_access_token && customer_token === order.customer_access_token);
+  }
+  if (!table_number || !token || order.table_number !== table_number) return false;
+  const [tables] = await conn.query(
+    'SELECT table_id FROM restaurant_tables WHERE table_number = ? AND qr_token = ? AND is_active = TRUE',
+    [table_number, token]
+  );
+  return tables.length > 0;
+};
 
 const normalizeOrderItems = (items) => {
   if (!Array.isArray(items)) return [];
@@ -35,11 +54,13 @@ const validateAndPriceItems = async (conn, normalizedItems) => {
 };
 
 const placeOrder = async (req, res) => {
-  const { table_number, token, items } = req.body;
+  const { table_number, token, items, order_type } = req.body;
   // items = [{ menu_item_id, quantity }]
+  const isOnlineOrder = order_type === 'online';
+  const resolvedTableNumber = isOnlineOrder ? 'ONLINE' : table_number;
 
-  if (!table_number || !token || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ success: false, message: 'Valid table QR code and items are required.' });
+  if ((!isOnlineOrder && (!table_number || !token)) || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'Select at least one item and use a valid table QR code for table orders.' });
   }
 
   const normalizedItems = items.map(item => ({
@@ -55,13 +76,15 @@ const placeOrder = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    const [tables] = await conn.query(
-      'SELECT table_id FROM restaurant_tables WHERE table_number = ? AND qr_token = ? AND is_active = TRUE',
-      [table_number, token]
-    );
-    if (tables.length === 0) {
-      await conn.rollback();
-      return res.status(403).json({ success: false, message: 'Invalid or inactive table QR code.' });
+    if (!isOnlineOrder) {
+      const [tables] = await conn.query(
+        'SELECT table_id FROM restaurant_tables WHERE table_number = ? AND qr_token = ? AND is_active = TRUE',
+        [table_number, token]
+      );
+      if (tables.length === 0) {
+        await conn.rollback();
+        return res.status(403).json({ success: false, message: 'Invalid or inactive table QR code.' });
+      }
     }
 
     // Validate and price items
@@ -90,9 +113,10 @@ const placeOrder = async (req, res) => {
     const estimatedWaitTime = await estimateWaitTime(normalizedItems);
 
     // Create order
+    const customerAccessToken = isOnlineOrder ? require('crypto').randomUUID() : null;
     const [orderResult] = await conn.query(
-      `INSERT INTO orders (table_number, total_amount, estimated_wait_time) VALUES (?, ?, ?)`,
-      [table_number, totalAmount, estimatedWaitTime]
+      `INSERT INTO orders (table_number, total_amount, estimated_wait_time, customer_access_token) VALUES (?, ?, ?, ?)`,
+      [resolvedTableNumber, totalAmount, estimatedWaitTime, customerAccessToken]
     );
     const orderId = orderResult.insertId;
 
@@ -111,9 +135,10 @@ const placeOrder = async (req, res) => {
       message: 'Order placed successfully.',
       data: {
         order_id: orderId,
-        table_number,
+        table_number: resolvedTableNumber,
         total_amount: totalAmount,
-        estimated_wait_time: estimatedWaitTime
+        estimated_wait_time: estimatedWaitTime,
+        customer_access_token: customerAccessToken
       }
     });
   } catch (err) {
@@ -128,10 +153,10 @@ const placeOrder = async (req, res) => {
 
 const addItemsToOrder = async (req, res) => {
   const { id } = req.params;
-  const { table_number, token, items } = req.body;
+  const { table_number, token, items, customer_token } = req.body;
 
-  if (!isPositiveInteger(id) || !table_number || !token || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ success: false, message: 'Valid order, table QR code, and items are required.' });
+  if (!isPositiveInteger(id) || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'Valid order items are required.' });
   }
 
   const normalizedItems = normalizeOrderItems(items);
@@ -143,15 +168,6 @@ const addItemsToOrder = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    const [tables] = await conn.query(
-      'SELECT table_id FROM restaurant_tables WHERE table_number = ? AND qr_token = ? AND is_active = TRUE',
-      [table_number, token]
-    );
-    if (tables.length === 0) {
-      await conn.rollback();
-      return res.status(403).json({ success: false, message: 'Invalid or inactive table QR code.' });
-    }
-
     const [orders] = await conn.query('SELECT * FROM orders WHERE order_id = ? FOR UPDATE', [id]);
     if (orders.length === 0) {
       await conn.rollback();
@@ -159,9 +175,9 @@ const addItemsToOrder = async (req, res) => {
     }
 
     const order = orders[0];
-    if (order.table_number !== table_number) {
+    if (!(await verifyOrderAccess(conn, order, { table_number, token, customer_token }))) {
       await conn.rollback();
-      return res.status(403).json({ success: false, message: 'This order belongs to another table.' });
+      return res.status(403).json({ success: false, message: 'You do not have access to add items to this order.' });
     }
     if (!['pending'].includes(order.order_status) || !['unpaid', 'pending'].includes(order.payment_status)) {
       await conn.rollback();
@@ -219,6 +235,50 @@ const addItemsToOrder = async (req, res) => {
   }
 };
 
+const cancelCustomerOrder = async (req, res) => {
+  const { id } = req.params;
+  const { table_number, token, customer_token } = req.body;
+
+  if (!isPositiveInteger(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid order ID.' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [orders] = await conn.query('SELECT * FROM orders WHERE order_id = ? FOR UPDATE', [id]);
+    if (orders.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    const order = orders[0];
+    if (!(await verifyOrderAccess(conn, order, { table_number, token, customer_token }))) {
+      await conn.rollback();
+      return res.status(403).json({ success: false, message: 'You do not have access to cancel this order.' });
+    }
+    if (!canCancelOrder(order)) {
+      await conn.rollback();
+      return res.status(409).json({ success: false, message: 'Orders can only be cancelled within the first 10 minutes.' });
+    }
+
+    await conn.query('UPDATE orders SET order_status = "cancelled" WHERE order_id = ?', [id]);
+    await conn.commit();
+    res.json({
+      success: true,
+      message: order.payment_status === 'paid'
+        ? 'Order cancelled. The restaurant will process any applicable refund.'
+        : 'Order cancelled successfully.'
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Customer order cancellation error:', err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  } finally {
+    conn.release();
+  }
+};
+
 const getOrderById = async (req, res) => {
   const { id } = req.params;
   if (!isPositiveInteger(id)) {
@@ -237,7 +297,9 @@ const getOrderById = async (req, res) => {
       [id]
     );
 
-    res.json({ success: true, data: { ...orders[0], items } });
+    const order = { ...orders[0] };
+    delete order.customer_access_token;
+    res.json({ success: true, data: { ...order, items } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error.' });
@@ -332,4 +394,4 @@ const getDashboardSummary = async (req, res) => {
   }
 };
 
-module.exports = { placeOrder, addItemsToOrder, getOrderById, getAllOrders, updateOrderStatus, getDashboardSummary };
+module.exports = { placeOrder, addItemsToOrder, cancelCustomerOrder, getOrderById, getAllOrders, updateOrderStatus, getDashboardSummary };

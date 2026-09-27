@@ -1473,6 +1473,60 @@ body {
   justify-content: flex-end;
 }
 
+.customer-cancel-window {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.customer-cancel-window svg {
+  flex: 0 0 auto;
+  color: var(--accent-hover);
+}
+
+.customer-cancel-window strong {
+  color: var(--text);
+}
+
+.customer-cancel-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.42);
+  border-radius: var(--radius);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.customer-cancel-panel > div {
+  display: grid;
+  gap: 3px;
+}
+
+.customer-cancel-panel span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+@media (max-width: 520px) {
+  .customer-cancel-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .customer-cancel-panel .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .customer-track-btn {
   min-height: 42px;
 }

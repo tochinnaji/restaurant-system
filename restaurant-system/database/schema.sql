@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS orders (
   estimated_wait_time INT COMMENT 'in minutes',
   order_status ENUM('pending','preparing','ready','delivered','cancelled') DEFAULT 'pending',
   payment_status ENUM('unpaid','pending','paid','failed') DEFAULT 'unpaid',
+  customer_access_token VARCHAR(100) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

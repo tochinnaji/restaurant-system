@@ -93,6 +93,14 @@ const seedPreparationTimeRecords = async () => {
   );
 };
 
+const ensureCustomerOrderSupport = async () => {
+  try {
+    await db.query('ALTER TABLE orders ADD COLUMN customer_access_token VARCHAR(100) NULL');
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+  }
+};
+
 const seedUsers = async () => {
   const passwordHash = '$2a$10$pvTJ/FW9KX4KrJ5ADXVrReY9enDAkax3ZDOT.u785UQzpg6jPomde';
   await db.query(
@@ -107,6 +115,7 @@ const seedUsers = async () => {
 
 const startServer = async () => {
   try {
+    await ensureCustomerOrderSupport();
     await seedUsers();
     await seedPreparationTimeRecords();
   } catch (err) {

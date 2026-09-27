@@ -89,7 +89,7 @@ function saveQrContext(tableNumber, token) {
   }));
 }
 
-function saveOrderContext(orderId, tableNumber, token) {
+function saveOrderContext(orderId, tableNumber, token, customerToken) {
   if (typeof window === 'undefined' || !orderId) return;
   const current = readStoredQrContext() || {};
   window.localStorage.setItem(QR_CONTEXT_KEY, JSON.stringify({
@@ -97,7 +97,8 @@ function saveOrderContext(orderId, tableNumber, token) {
     orderId: String(orderId),
     orderSavedAt: Date.now(),
     tableNumber: tableNumber || current.tableNumber,
-    token: token || current.token
+    token: token || current.token,
+    customerToken: customerToken || current.customerToken
   }));
 }
 
@@ -566,8 +567,10 @@ function CustomerPage() {
   const storedQrContext = useMemo(readStoredQrContext, []);
   const urlTableNumber = searchParams.get('table');
   const urlQrToken = searchParams.get('token');
-  const tableNumber = urlTableNumber || storedQrContext?.tableNumber || 'T1';
+  const tableNumber = urlTableNumber || storedQrContext?.tableNumber || 'ONLINE';
   const qrToken = urlQrToken || (storedQrContext?.tableNumber === tableNumber ? storedQrContext?.token : '') || '';
+  const customerToken = storedQrContext?.tableNumber === tableNumber ? storedQrContext?.customerToken || '' : '';
+  const isOnlineOrder = !qrToken && tableNumber === 'ONLINE';
   const [menu, setMenu] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [cart, setCart] = useState([]);
@@ -637,7 +640,7 @@ function CustomerPage() {
       ]);
       if (orderRes.success) {
         setActiveOrder(orderRes.data);
-        saveOrderContext(activeOrderId, tableNumber, qrToken);
+        saveOrderContext(activeOrderId, tableNumber, qrToken, orderRes.data.customer_access_token);
         setOrderHistory(saveOrderHistoryEntry(tableNumber, orderRes.data));
       }
       if (messageRes.success) {
@@ -657,7 +660,7 @@ function CustomerPage() {
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const tableHint = qrToken ? `Table ${tableNumber}` : `Table ${tableNumber} - scan a valid QR link`;
+  const tableHint = qrToken ? `Table ${tableNumber}` : isOnlineOrder ? 'Online ordering' : `Table ${tableNumber} - scan a valid QR link`;
   const homeSlide = HOME_SLIDES[homeSlideIndex];
 
   async function refreshTableOrderHistory() {
@@ -692,7 +695,7 @@ function CustomerPage() {
       }
       if (orderRes?.success) {
         setActiveOrder(orderRes.data);
-        saveOrderContext(activeOrderId, tableNumber, qrToken);
+        saveOrderContext(activeOrderId, tableNumber, qrToken, orderRes.data.customer_access_token);
         setOrderHistory(saveOrderHistoryEntry(tableNumber, orderRes.data));
       } else {
         await refreshTableOrderHistory();
@@ -762,12 +765,6 @@ function CustomerPage() {
   }
 
   async function addItemsToCurrentOrder() {
-    if (!qrToken) {
-      const message = 'Scan a valid table QR code before adding items.';
-      setOrderActionMessage(message);
-      pushToast('danger', message);
-      return;
-    }
     if (cart.length === 0) {
       const message = 'Add at least one menu item first.';
       setOrderActionMessage(message);
@@ -779,6 +776,7 @@ function CustomerPage() {
       const res = await api.post(`/orders/${activeOrderId}/items`, {
         table_number: tableNumber,
         token: qrToken,
+        customer_token: customerToken,
         items: cart.map((item) => ({ menu_item_id: item.menu_item_id, quantity: item.quantity }))
       });
       if (!res.success) {
@@ -799,12 +797,6 @@ function CustomerPage() {
   }
 
   async function placeOrder() {
-    if (!qrToken) {
-      const message = 'Scan a valid table QR code before placing an order.';
-      setOrderActionMessage(message);
-      pushToast('danger', message);
-      return;
-    }
     if (cart.length === 0) {
       const message = 'Add at least one menu item first.';
       setOrderActionMessage(message);
@@ -816,6 +808,7 @@ function CustomerPage() {
       const res = await api.post('/orders', {
         table_number: tableNumber,
         token: qrToken,
+        order_type: isOnlineOrder ? 'online' : undefined,
         items: cart.map((item) => ({ menu_item_id: item.menu_item_id, quantity: item.quantity }))
       });
       if (!res.success) {
@@ -825,7 +818,7 @@ function CustomerPage() {
         return;
       }
       setActiveOrderId(String(res.data.order_id));
-      saveOrderContext(res.data.order_id, tableNumber, qrToken);
+      saveOrderContext(res.data.order_id, tableNumber, qrToken, res.data.customer_access_token);
       const placedOrder = { ...res.data, order_status: 'pending', payment_status: 'unpaid', items: cart, created_at: new Date().toISOString() };
       setActiveOrder(placedOrder);
       setOrderHistory(saveOrderHistoryEntry(tableNumber, placedOrder));
@@ -901,8 +894,36 @@ function CustomerPage() {
     }
   }
 
+  async function cancelCustomerOrder() {
+    if (!activeOrderId || !activeOrder) return;
+    if (!window.confirm('Cancel this order? This action cannot be undone.')) return;
+
+    const res = await api.post(`/orders/${activeOrderId}/cancel`, {
+      table_number: tableNumber,
+      token: qrToken,
+      customer_token: customerToken
+    });
+    if (!res.success) {
+      pushToast('danger', res.message || 'Could not cancel this order.');
+      return;
+    }
+
+    const cancelledOrder = { ...activeOrder, order_status: 'cancelled' };
+    setActiveOrder(cancelledOrder);
+    setOrderHistory(saveOrderHistoryEntry(tableNumber, cancelledOrder));
+    pushToast('success', res.message || 'Order cancelled successfully.');
+  }
+
   const activeOrderStatus = activeOrder?.order_status || 'pending';
   const elapsedMinutes = activeOrder?.created_at ? Math.floor((now - new Date(activeOrder.created_at).getTime()) / 60000) : 0;
+  const cancellationDeadline = activeOrder?.created_at ? new Date(activeOrder.created_at).getTime() + (10 * 60 * 1000) : 0;
+  const cancellationMsRemaining = Math.max(cancellationDeadline - now, 0);
+  const cancellationMinutes = Math.floor(cancellationMsRemaining / 60000);
+  const cancellationSeconds = Math.floor((cancellationMsRemaining % 60000) / 1000);
+  const cancellationCountdown = `${cancellationMinutes}:${String(cancellationSeconds).padStart(2, '0')}`;
+  const canCustomerCancel = Boolean(
+    activeOrderId && activeOrder && cancellationMsRemaining > 0 && !['cancelled', 'delivered'].includes(activeOrderStatus)
+  );
   const remainingMinutes = activeOrder?.estimated_wait_time != null ? Math.max(Number(activeOrder.estimated_wait_time) - elapsedMinutes, 0) : null;
   const timeLeftText = remainingMinutes == null
     ? 'Pending wait estimate'
@@ -1021,7 +1042,7 @@ function CustomerPage() {
         </div>
       </header>
 
-      {!qrToken ? (
+      {!qrToken && !isOnlineOrder ? (
         <div className="notice notice-danger">
           This table link is missing a QR token. Use a valid QR link before placing an order.
         </div>
@@ -1040,6 +1061,12 @@ function CustomerPage() {
               <span>Track order</span>
             </button>
           </div>
+          {canCustomerCancel ? (
+            <div className="customer-cancel-window">
+              <Clock3 size={15} />
+              <span>Orders can be cancelled within the first 10 minutes. <strong>{cancellationCountdown}</strong> remaining.</span>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -1286,6 +1313,18 @@ function CustomerPage() {
               <span>Total</span>
               <strong>{formatNaira(activeOrder.total_amount)}</strong>
             </div>
+            {canCustomerCancel ? (
+              <div className="customer-cancel-panel">
+                <div>
+                  <strong>Need to cancel?</strong>
+                  <span>Orders can be cancelled within the first 10 minutes. {cancellationCountdown} remaining.</span>
+                </div>
+                <button type="button" className="btn btn-danger" onClick={cancelCustomerOrder}>
+                  <Ban size={16} />
+                  <span>Cancel order</span>
+                </button>
+              </div>
+            ) : null}
             {canRetryPayment ? (
               <div className="page-actions">
                 <button type="button" className="btn btn-primary" onClick={() => { setShowTracking(false); setShowPayment(true); }}>
