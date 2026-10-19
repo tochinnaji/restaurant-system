@@ -3,9 +3,10 @@ const { estimateWaitTime } = require('../utils/waitTime');
 
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
 const CUSTOMER_CANCELLATION_WINDOW_MS = 5 * 60 * 1000;
+const NON_CANCELLABLE_ORDER_STATUSES = new Set(['cancelled', 'ready', 'delivered']);
 
 const canCancelOrder = (order) => {
-  if (!order || ['cancelled', 'delivered'].includes(order.order_status)) return false;
+  if (!order || NON_CANCELLABLE_ORDER_STATUSES.has(order.order_status)) return false;
   const createdAt = new Date(order.created_at).getTime();
   return Number.isFinite(createdAt) && Date.now() - createdAt < CUSTOMER_CANCELLATION_WINDOW_MS;
 };

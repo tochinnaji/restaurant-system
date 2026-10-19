@@ -963,7 +963,7 @@ function CustomerPage() {
   const cancellationSeconds = Math.floor((cancellationMsRemaining % 60000) / 1000);
   const cancellationCountdown = `${cancellationMinutes}:${String(cancellationSeconds).padStart(2, '0')}`;
   const canCustomerCancel = Boolean(
-    activeOrderId && activeOrder && cancellationMsRemaining > 0 && !['cancelled', 'delivered'].includes(activeOrderStatus)
+    activeOrderId && activeOrder && cancellationMsRemaining > 0 && !['cancelled', 'ready', 'delivered'].includes(activeOrderStatus)
   );
   const remainingMinutes = activeOrder?.estimated_wait_time != null ? Math.max(Number(activeOrder.estimated_wait_time) - elapsedMinutes, 0) : null;
   const timeLeftText = remainingMinutes == null
