@@ -9,9 +9,13 @@ import {
   Edit3,
   Grid2x2,
   Home,
+  Instagram,
   LayoutDashboard,
   LogOut,
+  Mail,
+  MapPin,
   Menu,
+  MessageCircle,
   Package,
   Ban,
   RotateCcw,
@@ -35,6 +39,8 @@ import {
   Eye,
   MoonStar,
   SunMedium,
+  Phone,
+  Twitter,
   X
 } from 'lucide-react';
 import { api } from './lib/api';
@@ -60,6 +66,15 @@ const HOME_SLIDES = [
   { main: 'menu-images/samosa.png' }
 ];
 const ORDER_HISTORY_TTL_MS = 24 * 60 * 60 * 1000;
+const CUSTOMER_CANCELLATION_WINDOW_MS = 5 * 60 * 1000;
+const BUSINESS_CONTACT = {
+  address: String(import.meta.env.VITE_BUSINESS_ADDRESS || '').trim(),
+  email: String(import.meta.env.VITE_BUSINESS_EMAIL || '').trim(),
+  phone: String(import.meta.env.VITE_BUSINESS_PHONE || '').trim(),
+  whatsapp: String(import.meta.env.VITE_BUSINESS_WHATSAPP || '').trim(),
+  instagram: String(import.meta.env.VITE_BUSINESS_INSTAGRAM || '').trim(),
+  twitter: String(import.meta.env.VITE_BUSINESS_TWITTER || '').trim()
+};
 
 function readStoredQrContext() {
   if (typeof window === 'undefined') return null;
@@ -177,6 +192,32 @@ function menuItemImageSrc(item) {
   const imageUrl = String(item?.image_url || '').trim();
   const resolvedImageUrl = MENU_IMAGE_ALIASES[imageUrl] || imageUrl || MENU_IMAGE_BY_NAME[item?.item_name] || '';
   return menuImageSrc(resolvedImageUrl);
+}
+
+function socialHandle(value) {
+  return String(value || '').replace(/^@+/, '');
+}
+
+function ContactMethod({ icon: Icon, label, value, href, external = false }) {
+  const content = (
+    <>
+      <Icon size={20} strokeWidth={1.9} aria-hidden="true" />
+      <span>
+        <strong>{label}</strong>
+        <small>{value}</small>
+      </span>
+    </>
+  );
+
+  if (!href) {
+    return <div className="home-contact-item is-placeholder">{content}</div>;
+  }
+
+  return (
+    <a className="home-contact-item" href={href} {...(external ? { target: '_blank', rel: 'noreferrer' } : {})}>
+      {content}
+    </a>
+  );
 }
 
 const ToastContext = createContext(null);
@@ -916,7 +957,7 @@ function CustomerPage() {
 
   const activeOrderStatus = activeOrder?.order_status || 'pending';
   const elapsedMinutes = activeOrder?.created_at ? Math.floor((now - new Date(activeOrder.created_at).getTime()) / 60000) : 0;
-  const cancellationDeadline = activeOrder?.created_at ? new Date(activeOrder.created_at).getTime() + (10 * 60 * 1000) : 0;
+  const cancellationDeadline = activeOrder?.created_at ? new Date(activeOrder.created_at).getTime() + CUSTOMER_CANCELLATION_WINDOW_MS : 0;
   const cancellationMsRemaining = Math.max(cancellationDeadline - now, 0);
   const cancellationMinutes = Math.floor(cancellationMsRemaining / 60000);
   const cancellationSeconds = Math.floor((cancellationMsRemaining % 60000) / 1000);
@@ -1064,7 +1105,7 @@ function CustomerPage() {
           {canCustomerCancel ? (
             <div className="customer-cancel-window">
               <Clock3 size={15} />
-              <span>Orders can be cancelled within the first 10 minutes. <strong>{cancellationCountdown}</strong> remaining.</span>
+              <span>Orders can be cancelled within the first 5 minutes. <strong>{cancellationCountdown}</strong> remaining.</span>
             </div>
           ) : null}
         </section>
@@ -1129,6 +1170,59 @@ function CustomerPage() {
               <span>Receipt-ready payments</span>
             </div>
           </div>
+
+          <section className="home-contact-panel" aria-labelledby="contact-heading">
+            <div className="home-contact-heading">
+              <span className="home-kicker">Contact and ordering</span>
+              <h3 id="contact-heading">Need help with an order?</h3>
+              <p>Contact the restaurant directly for questions, assisted ordering, or more information before you visit.</p>
+            </div>
+            <div className="home-contact-grid">
+              <ContactMethod
+                icon={MapPin}
+                label="Restaurant location"
+                value={BUSINESS_CONTACT.address || 'Add your restaurant address'}
+                href={BUSINESS_CONTACT.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(BUSINESS_CONTACT.address)}` : ''}
+                external
+              />
+              <ContactMethod
+                icon={Mail}
+                label="Email us"
+                value={BUSINESS_CONTACT.email || 'Add your business email'}
+                href={BUSINESS_CONTACT.email ? `mailto:${BUSINESS_CONTACT.email}` : ''}
+              />
+              <ContactMethod
+                icon={Phone}
+                label="Call to order"
+                value={BUSINESS_CONTACT.phone || 'Add your phone number'}
+                href={BUSINESS_CONTACT.phone ? `tel:${BUSINESS_CONTACT.phone.replace(/[^\d+]/g, '')}` : ''}
+              />
+              <ContactMethod
+                icon={MessageCircle}
+                label="WhatsApp ordering"
+                value={BUSINESS_CONTACT.whatsapp || 'Add your WhatsApp number'}
+                href={BUSINESS_CONTACT.whatsapp ? `https://wa.me/${BUSINESS_CONTACT.whatsapp.replace(/\D/g, '')}` : ''}
+                external
+              />
+            </div>
+            <div className="home-social-row" aria-label="Social media">
+              <span>Follow IRMS</span>
+              <ContactMethod
+                icon={Instagram}
+                label="Instagram"
+                value={`@${socialHandle(BUSINESS_CONTACT.instagram) || '________'}`}
+                href={BUSINESS_CONTACT.instagram ? `https://instagram.com/${socialHandle(BUSINESS_CONTACT.instagram)}` : ''}
+                external
+              />
+              <ContactMethod
+                icon={Twitter}
+                label="Twitter/X"
+                value={`@${socialHandle(BUSINESS_CONTACT.twitter) || '________'}`}
+                href={BUSINESS_CONTACT.twitter ? `https://x.com/${socialHandle(BUSINESS_CONTACT.twitter)}` : ''}
+                external
+              />
+            </div>
+          </section>
         </section>
       ) : (
         <>
@@ -1317,7 +1411,7 @@ function CustomerPage() {
               <div className="customer-cancel-panel">
                 <div>
                   <strong>Need to cancel?</strong>
-                  <span>Orders can be cancelled within the first 10 minutes. {cancellationCountdown} remaining.</span>
+                  <span>Orders can be cancelled within the first 5 minutes. {cancellationCountdown} remaining.</span>
                 </div>
                 <button type="button" className="btn btn-danger" onClick={cancelCustomerOrder}>
                   <Ban size={16} />

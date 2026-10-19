@@ -2,7 +2,7 @@ const db = require('../config/db');
 const { estimateWaitTime } = require('../utils/waitTime');
 
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
-const CUSTOMER_CANCELLATION_WINDOW_MS = 10 * 60 * 1000;
+const CUSTOMER_CANCELLATION_WINDOW_MS = 5 * 60 * 1000;
 
 const canCancelOrder = (order) => {
   if (!order || ['cancelled', 'delivered'].includes(order.order_status)) return false;
@@ -259,7 +259,7 @@ const cancelCustomerOrder = async (req, res) => {
     }
     if (!canCancelOrder(order)) {
       await conn.rollback();
-      return res.status(409).json({ success: false, message: 'Orders can only be cancelled within the first 10 minutes.' });
+      return res.status(409).json({ success: false, message: 'Orders can only be cancelled within the first 5 minutes.' });
     }
 
     await conn.query('UPDATE orders SET order_status = "cancelled" WHERE order_id = ?', [id]);

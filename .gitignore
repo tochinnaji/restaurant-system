@@ -10,6 +10,7 @@ restaurant-system/backend/.env
 restaurant-system/frontend/.env
 restaurant-system/**/.env.*
 !restaurant-system/backend/.env.example
+!restaurant-system/frontend/.env.example
 
 # Logs
 *.log
