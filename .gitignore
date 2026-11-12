@@ -18,6 +18,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Local presentation editing files and exported defense copies
+.pptx-work/
+Intelligent Restaurant Order System Defense - final v6 - updated QR.pptx
+
 # OS/editor noise
 .DS_Store
 Thumbs.db
